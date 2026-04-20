@@ -1,0 +1,119 @@
+"use client";
+
+import { useState } from "react";
+import { Loader2, Plus, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+
+interface CategoryFormProps {
+  initialData?: any;
+  onSubmit: (data: any) => Promise<void>;
+  isLoading?: boolean;
+}
+
+export function CategoryForm({ 
+  initialData, 
+  onSubmit, 
+  isLoading 
+}: CategoryFormProps) {
+  const [formData, setFormData] = useState({
+    name: initialData?.name || "",
+    slug: initialData?.slug || "",
+    description: initialData?.description || "",
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onSubmit(formData);
+  };
+
+  const handleNameChange = (name: string) => {
+    // Auto-generate slug if not editing existing
+    const slug = name
+      .toLowerCase()
+      .trim()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      name, 
+      slug: initialData ? prev.slug : slug 
+    }));
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="flex items-center gap-4 mb-8">
+        <Link 
+          href="/admin/categories"
+          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Link>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
+          {initialData ? "Edit Category" : "New Category"}
+        </h2>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-8 bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-tight">
+              Category Name
+            </label>
+            <input
+              required
+              placeholder="e.g. Streetwear"
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all"
+              value={formData.name ?? ""}
+              onChange={(e) => handleNameChange(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-tight">
+              Slug
+            </label>
+            <input
+              required
+              placeholder="e.g. streetwear"
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all"
+              value={formData.slug ?? ""}
+              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-tight">
+            Description
+          </label>
+          <textarea
+            rows={4}
+            placeholder="Brief description of this category..."
+            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all resize-none"
+            value={formData.description ?? ""}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          />
+        </div>
+
+        <div className="pt-4 flex justify-end">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/20 flex items-center gap-2 disabled:opacity-50"
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                {initialData ? "Update Category" : "Save Category"}
+                {!initialData && <Plus className="w-5 h-5" />}
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
