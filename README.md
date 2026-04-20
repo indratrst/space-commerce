@@ -74,9 +74,9 @@ npm run dev
 - Login page: `/login`
 - Admin dashboard: `/admin`
 - Default seeded accounts:
-  - `superuser@admin.com` / `password123`
-  - `admin@admin.com` / `password123`
-  - `user@admin.com` / `password123`
+  - `superuser@admin.com` / `password`
+  - `admin@admin.com` / `password`
+  - `user@admin.com` / `password`
 
 ## Project Structure
 
