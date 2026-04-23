@@ -4,11 +4,22 @@ import { prisma } from "@/lib/prisma";
 export type ProductWithRelations = Awaited<ReturnType<typeof getProducts>>[number];
 export type CategoryWithCount = Awaited<ReturnType<typeof getCategories>>[number];
 
-export async function getProducts(categorySlug?: string) {
+export async function getProducts(categorySlug?: string, search?: string) {
+  const where: any = {};
+  
+  if (categorySlug) {
+    where.category = { slug: categorySlug };
+  }
+  
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } }
+    ];
+  }
+
   return prisma.product.findMany({
-    where: categorySlug
-      ? { category: { slug: categorySlug } }
-      : undefined,
+    where,
     include: {
       category: true,
       variants: true,

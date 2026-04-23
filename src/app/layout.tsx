@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/contexts/CartContext";
+import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +32,13 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <CartProvider>
-          <StorefrontUI>
-            {children}
-          </StorefrontUI>
-        </CartProvider>
+        <ReactQueryProvider>
+          <CartProvider>
+            <StorefrontUI>
+              {children}
+            </StorefrontUI>
+          </CartProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   );
