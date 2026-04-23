@@ -1,7 +1,8 @@
-import { ProductGrid } from "@/components/ui/ProductGrid";
-import { getProducts } from "@/lib/data";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { getProducts } from "@/lib/data";
+import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import { ProductListClient } from "@/components/products/ProductListClient";
 
 const categories = [
   {
@@ -25,7 +26,13 @@ const categories = [
 ];
 
 export default async function Home() {
-  const products = await getProducts();
+  const queryClient = new QueryClient();
+
+  // Prefetch products data
+  await queryClient.prefetchQuery({
+    queryKey: ["products", { category: undefined }],
+    queryFn: () => getProducts(),
+  });
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -134,7 +141,9 @@ export default async function Home() {
             ></div>
           </div>
 
-          <ProductGrid products={products} />
+          <HydrationBoundary state={dehydrate(queryClient)}>
+            <ProductListClient />
+          </HydrationBoundary>
 
           <div className="mt-16 flex justify-center">
             <button

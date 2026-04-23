@@ -6,11 +6,21 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const categorySlug = searchParams.get("category");
+    const search = searchParams.get("search");
+
+    const where: any = {};
+    if (categorySlug) {
+      where.category = { slug: categorySlug };
+    }
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ];
+    }
 
     const products = await prisma.product.findMany({
-      where: categorySlug
-        ? { category: { slug: categorySlug } }
-        : undefined,
+      where,
       include: {
         category: true,
         variants: true,

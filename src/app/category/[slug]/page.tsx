@@ -1,7 +1,8 @@
 import { getProducts } from "@/lib/data";
-import { ProductCard } from "@/components/ui/ProductCard";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import { ProductListClient } from "@/components/products/ProductListClient";
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
@@ -16,21 +17,13 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     notFound();
   }
 
-  const categoryProducts = await getProducts(slug);
+  const queryClient = new QueryClient();
 
-  // Map products to the shape ProductCard expects
-  const mappedProducts = categoryProducts.map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    price: p.price,
-    description: p.description,
-    category: p.category.name,
-    image: p.image ?? undefined,
-    rating: {
-      rate: p.ratingRate ?? 0,
-      count: p.ratingCount ?? 0,
-    },
-  }));
+  // Prefetch category specific products
+  await queryClient.prefetchQuery({
+    queryKey: ["products", { category: slug }],
+    queryFn: () => getProducts(slug),
+  });
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 min-h-screen">
@@ -47,17 +40,9 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
         ></div>
       </div>
 
-      {mappedProducts.length === 0 ? (
-        <div className="text-center font-bold tracking-widest uppercase mt-20" style={{ color: "var(--muted)" }}>
-          No products found for this category.
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
-          {mappedProducts.map((product: any) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      )}
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <ProductListClient categorySlug={slug} />
+      </HydrationBoundary>
     </div>
   );
 }

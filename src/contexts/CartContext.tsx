@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { Product, CartItem } from "@/types";
+import { useCartStore } from "@/store/useCartStore";
 
 interface CartContextType {
   cart: CartItem[];
@@ -17,80 +18,50 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const store = useCartStore();
   const [isMounted, setIsMounted] = useState(false);
 
-  // Load from local storage on mount
   useEffect(() => {
     setIsMounted(true);
-    const savedCart = localStorage.getItem("cart");
-    if (savedCart) {
-      try {
-        setCart(JSON.parse(savedCart));
-      } catch (error) {
-        console.error("Failed to parse cart from local storage", error);
-      }
-    }
   }, []);
 
-  // Save to local storage whenever cart changes
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem("cart", JSON.stringify(cart));
-    }
-  }, [cart, isMounted]);
+  // Sync isCartOpen with store
+  const setIsCartOpen = (isOpen: boolean) => {
+    store.setCartOpen(isOpen);
+  };
 
   const addToCart = (product: Product, quantity = 1) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.product.id === product.id);
-      if (existingItem) {
-        return prevCart.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      }
-      return [...prevCart, { product, quantity }];
-    });
-    setIsCartOpen(true);
+    store.addItem(product, quantity);
   };
 
   const removeFromCart = (productId: string | number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.product.id !== productId));
+    store.removeItem(productId);
   };
 
   const updateQuantity = (productId: string | number, quantity: number) => {
-    if (quantity < 1) {
-      removeFromCart(productId);
-      return;
-    }
-    setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
-      )
-    );
+    store.updateQuantity(productId, quantity);
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    store.clearCart();
+  };
 
-  const cartTotal = cart.reduce(
-    (total, item) => total + item.product.price * item.quantity,
-    0
-  );
+  const cartTotal = store.getTotalPrice();
 
   // Prevent hydration mismatch
-  if (!isMounted) return null;
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <CartContext.Provider
       value={{
-        cart,
+        cart: store.items,
         addToCart,
         removeFromCart,
         updateQuantity,
         clearCart,
-        isCartOpen,
+        isCartOpen: store.isCartOpen,
         setIsCartOpen,
         cartTotal,
       }}
@@ -107,3 +78,4 @@ export function useCart() {
   }
   return context;
 }
+
