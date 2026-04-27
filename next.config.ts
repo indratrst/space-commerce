@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  allowedDevOrigins: [
+    'repository-manitoba-petition-goes.trycloudflare.com',
+  ],
 };
 
 export default nextConfig;

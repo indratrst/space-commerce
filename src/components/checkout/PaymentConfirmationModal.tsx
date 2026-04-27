@@ -1,7 +1,7 @@
 "use client";
 
 import { CartItem } from "@/types";
-import { X, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, CheckCircle2, AlertCircle, ShoppingBag } from "lucide-react";
 
 interface PaymentConfirmationModalProps {
   isOpen: boolean;

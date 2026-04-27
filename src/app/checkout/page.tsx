@@ -6,11 +6,11 @@ import { CheckoutForm } from "@/components/checkout/CheckoutForm";
 import { ShippingSelector } from "@/components/checkout/ShippingSelector";
 import { PaymentSelector } from "@/components/checkout/PaymentSelector";
 import { OrderSummary } from "@/components/checkout/OrderSummary";
-import { PaymentConfirmationModal } from "@/components/checkout/PaymentConfirmationModal";
 import { BillingAddress, ShippingRate } from "@/types/checkout";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+
 
 export default function CheckoutPage() {
   const { cart, cartTotal, clearCart } = useCart();
@@ -20,60 +20,76 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [deliveryMethod, setDeliveryMethod] = useState<"shipping" | "pickup">("shipping");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const totalAmount = cartTotal + (shippingRate?.price || 0);
+  const shippingCost = shippingRate?.price || 0;
+  const totalAmount = cartTotal + shippingCost;
 
-  const isFormValid = 
-    billingData.firstName && 
-    billingData.lastName && 
-    billingData.email && 
-    billingData.phone && 
-    (deliveryMethod === "pickup" || (billingData.areaId && billingData.address)) && 
-    (deliveryMethod === "pickup" || shippingRate) && 
+  const isFormValid =
+    billingData.firstName &&
+    billingData.lastName &&
+    billingData.email &&
+    billingData.phone &&
+    (deliveryMethod === "pickup" || (billingData.areaId && billingData.address)) &&
+    (deliveryMethod === "pickup" || shippingRate) &&
     paymentMethod;
 
   const handlePlaceOrder = async () => {
     if (!isFormValid) return;
-    
-    // If QR method, show confirmation modal first
-    if (paymentMethod === "qris") {
-      setIsModalOpen(true);
-    } else {
-      await processOrder();
-    }
-  };
-
-  const processOrder = async () => {
+    setErrorMsg(null);
     setIsSubmitting(true);
-    setIsModalOpen(false);
-    
+
     try {
-      if (paymentMethod === "qris") {
-        // Generate QRIS using Raja Ongkir Komerce
-        const res = await fetch("/api/rajaongkir", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "qris",
-            amount: totalAmount,
-            external_id: `ORDER-${Date.now()}`,
-          }),
-        });
-        const data = await res.json();
-        
-        // Simulating redirect to QR page or success page with QR
-        // In a real app, you'd handle the QR data here
-        console.log("QRIS Generated:", data);
-      } else {
-        // Normal mock process
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      // Step 1: Get Midtrans Snap token from our API
+      const res = await fetch("/api/payment/midtrans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: cart,
+          billingData,
+          shippingRate,
+          subtotal: cartTotal,
+          shippingCost,
+          total: totalAmount,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.token) {
+        const msg = Array.isArray(data.error)
+          ? data.error.join(", ")
+          : data.error || "Gagal membuat transaksi. Coba lagi.";
+        setErrorMsg(msg);
+        return;
       }
-      
-      clearCart();
-      router.push("/checkout/success");
-    } catch (error) {
-      console.error(error);
+
+      const { token, order_id } = data;
+
+      // Step 2: Open Midtrans Snap popup
+      window.snap.pay(token, {
+        onSuccess(result) {
+          clearCart();
+          router.push(
+            `/checkout/success?order_id=${order_id}&status=success&payment_type=${result.payment_type || ""}`
+          );
+        },
+        onPending(result) {
+          clearCart();
+          router.push(
+            `/checkout/success?order_id=${order_id}&status=pending&payment_type=${result.payment_type || ""}`
+          );
+        },
+        onError(result) {
+          console.error("Midtrans payment error:", result);
+          setErrorMsg("Pembayaran gagal. Silakan coba metode lain.");
+        },
+        onClose() {
+          // User closed popup without completing — do nothing, allow retry
+        },
+      });
+    } catch (err: any) {
+      setErrorMsg(err.message || "Terjadi kesalahan. Coba lagi.");
     } finally {
       setIsSubmitting(false);
     }
@@ -83,7 +99,10 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-4">
         <h2 className="text-2xl font-bold uppercase tracking-widest">Your cart is empty</h2>
-        <Link href="/products" className="bg-black text-white px-8 py-3 uppercase text-sm font-bold hover:bg-gray-800 transition-colors">
+        <Link
+          href="/products"
+          className="bg-black text-white px-8 py-3 uppercase text-sm font-bold hover:bg-gray-800 transition-colors"
+        >
           Return to Shop
         </Link>
       </div>
@@ -93,15 +112,21 @@ export default function CheckoutPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 md:py-20">
       <div className="mb-8">
-        <Link href="/products" className="text-xs font-bold uppercase flex items-center gap-2 hover:opacity-70 transition-opacity">
+        <Link
+          href="/products"
+          className="text-xs font-bold uppercase flex items-center gap-2 hover:opacity-70 transition-opacity"
+        >
           <ArrowLeft className="h-3 w-3" /> Back to Products
         </Link>
-        <h1 className="text-3xl md:text-4xl font-extrabold uppercase tracking-tighter mt-4">Checkout</h1>
+        <h1 className="text-3xl md:text-4xl font-extrabold uppercase tracking-tighter mt-4">
+          Checkout
+        </h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* Left Column: Forms */}
         <div className="lg:col-span-8 space-y-12">
+          {/* Delivery Method Toggle */}
           <div className="flex gap-4">
             <button
               onClick={() => {
@@ -109,7 +134,9 @@ export default function CheckoutPage() {
                 setShippingRate(null);
               }}
               className={`flex-1 py-4 border-2 font-bold uppercase transition-all ${
-                deliveryMethod === "shipping" ? "border-black bg-black text-white" : "border-gray-200 text-muted-foreground"
+                deliveryMethod === "shipping"
+                  ? "border-black bg-black text-white"
+                  : "border-gray-200 text-muted-foreground"
               }`}
             >
               Delivery Shipping
@@ -118,55 +145,69 @@ export default function CheckoutPage() {
               onClick={() => {
                 setDeliveryMethod("pickup");
                 setShippingRate({
-                   courier_name: "Store Pickup",
-                   courier_code: "PICKUP",
-                   courier_service_name: "Self Pickup",
-                   courier_service_code: "PICKUP",
-                   price: 0,
-                   duration: "Same Day"
+                  courier_name: "Store Pickup",
+                  courier_code: "PICKUP",
+                  courier_service_name: "Self Pickup",
+                  courier_service_code: "PICKUP",
+                  price: 0,
+                  duration: "Same Day",
                 });
               }}
               className={`flex-1 py-4 border-2 font-bold uppercase transition-all ${
-                deliveryMethod === "pickup" ? "border-black bg-black text-white" : "border-gray-200 text-muted-foreground"
+                deliveryMethod === "pickup"
+                  ? "border-black bg-black text-white"
+                  : "border-gray-200 text-muted-foreground"
               }`}
             >
               Ambil di Store
             </button>
           </div>
 
-          <CheckoutForm 
+          <CheckoutForm
             deliveryMethod={deliveryMethod}
-            onChange={(data) => setBillingData(prev => ({ ...prev, ...data }))} 
+            onChange={(data) => setBillingData((prev) => ({ ...prev, ...data }))}
           />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t" style={{ borderColor: "var(--surface-border)" }}>
+
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t"
+            style={{ borderColor: "var(--surface-border)" }}
+          >
             {deliveryMethod === "shipping" ? (
-              <ShippingSelector 
-                billingData={billingData} 
-                items={cart} 
-                onSelect={(rate) => setShippingRate(rate)} 
+              <ShippingSelector
+                billingData={billingData}
+                items={cart}
+                onSelect={(rate: ShippingRate) => setShippingRate(rate)}
               />
             ) : (
-              <div className="p-6 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-center space-y-2" style={{ borderColor: "var(--surface-border)" }}>
+              <div
+                className="p-6 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-center space-y-2"
+                style={{ borderColor: "var(--surface-border)" }}
+              >
                 <p className="text-sm font-bold uppercase">Store Location</p>
-                <p className="text-xs text-muted-foreground">Wellborn Flagship Store<br/>Jl. Sultan Agung No. 24, Bandung</p>
+                <p className="text-xs text-muted-foreground">
+                  Wellborn Flagship Store
+                  <br />
+                  Jl. Sultan Agung No. 24, Bandung
+                </p>
               </div>
             )}
-            <PaymentSelector 
-              onSelect={(methodId) => setPaymentMethod(methodId)} 
-            />
+            <PaymentSelector onSelect={(methodId) => setPaymentMethod(methodId)} />
           </div>
+
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 text-sm rounded-lg font-medium">
+              ⚠️ {errorMsg}
+            </div>
+          )}
         </div>
 
         {/* Right Column: Summary */}
         <div className="lg:col-span-4 sticky top-24 self-start">
-          <OrderSummary 
-            items={cart} 
-            subtotal={cartTotal} 
-            shippingRate={shippingRate} 
-          />
-          
+          <OrderSummary items={cart} subtotal={cartTotal} shippingRate={shippingRate} />
+
           <button
+            id="place-order-btn"
             onClick={handlePlaceOrder}
             disabled={!isFormValid || isSubmitting}
             className={`w-full mt-6 py-4 uppercase font-bold tracking-widest transition-all shadow-md flex items-center justify-center gap-2 ${
@@ -177,28 +218,29 @@ export default function CheckoutPage() {
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="h-5 w-5 animate-spin" /> Processing...
+                <Loader2 className="h-5 w-5 animate-spin" /> Menyiapkan pembayaran...
               </>
             ) : (
-              "Place Order"
+              "Bayar Sekarang"
             )}
           </button>
-          
+
+          {isFormValid && !isSubmitting && (
+            <div className="flex items-center justify-center gap-1.5 mt-3">
+              <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
+              <p className="text-[10px] text-center text-muted-foreground uppercase tracking-tighter">
+                Aman & dienkripsi via Midtrans
+              </p>
+            </div>
+          )}
+
           {!isFormValid && (
             <p className="text-[10px] text-center text-muted-foreground mt-3 uppercase tracking-tighter">
-              Please complete all required fields, select shipping & payment method
+              Lengkapi semua field, pilih pengiriman & metode bayar
             </p>
           )}
         </div>
       </div>
-
-      <PaymentConfirmationModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onConfirm={processOrder}
-        items={cart}
-        total={totalAmount}
-      />
     </div>
   );
 }
