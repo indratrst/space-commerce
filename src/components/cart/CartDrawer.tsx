@@ -109,7 +109,7 @@ export function CartDrawer() {
             <ul className="space-y-6">
               {cart.map((item) => (
                 <li key={item.product.id} className="flex gap-4 border-b pb-6" style={{ borderColor: "var(--surface-border)" }}>
-                  <div className="h-24 w-20 flex-shrink-0 overflow-hidden" style={{ background: "var(--surface)" }}>
+                  <div className="h-24 w-20 shrink-0 overflow-hidden" style={{ background: "var(--surface)" }}>
                     {item.product.image ? (
                       <img
                         src={item.product.image}
@@ -178,7 +178,7 @@ export function CartDrawer() {
             <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
               {recommendedProducts.map((product) => (
                 <div key={product.id} className="min-w-[140px] snap-start flex flex-col group gap-2">
-                  <Link href={`/product/${product.id}`} className="block relative aspect-[3/4] overflow-hidden" onClick={() => setIsCartOpen(false)}>
+                  <Link href={`/product/${product.id}`} className="block relative aspect-3/4 overflow-hidden" onClick={() => setIsCartOpen(false)}>
                     <img
                       src={product.image}
                       alt={product.title}
@@ -205,7 +205,7 @@ export function CartDrawer() {
         </div>
 
         {cart.length > 0 && (
-          <div className="border-t p-4 flex-shrink-0" style={{ borderColor: "var(--surface-border)", background: "var(--card-bg)" }}>
+          <div className="border-t p-4 shrink-0" style={{ borderColor: "var(--surface-border)", background: "var(--card-bg)" }}>
             <div className="flex justify-between items-center mb-6 text-lg font-bold" style={{ color: "var(--foreground)" }}>
               <span>Subtotal</span>
               <span>Rp {cartTotal.toLocaleString("id-ID")}</span>
@@ -219,14 +219,13 @@ export function CartDrawer() {
               >
                 View Cart
               </Link>
-              <button
-                className="w-full py-3 bg-black text-white font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
-                onClick={() => {
-                  alert("Checkout functionality not implemented in UI mockup.")
-                }}
+              <Link
+                href="/checkout"
+                onClick={() => setIsCartOpen(false)}
+                className="block w-full py-3 text-center bg-black text-white font-bold uppercase tracking-wider hover:opacity-80 transition-opacity"
               >
                 Checkout
-              </button>
+              </Link>
             </div>
           </div>
         )}
