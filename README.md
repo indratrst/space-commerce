@@ -97,4 +97,4 @@ npm run dev
 
 - Ensure `SESSION_SECRET` is set before running authentication.
 - Database seeding creates default admin and user accounts.
-- Protected admin routes are enforced by the middleware in `src/middleware.ts`.
+- Protected admin routes are enforced by the proxy in `src/proxy.ts`.

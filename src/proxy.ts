@@ -6,10 +6,12 @@ import { decrypt } from "@/lib/session";
 const protectedRoutes = ["/admin"];
 const publicRoutes = ["/login", "/signup", "/"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   // 2. Check if the current route is protected or public
   const path = req.nextUrl.pathname;
-  const isProtectedRoute = protectedRoutes.some((route) => path.startsWith(route));
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    path.startsWith(route),
+  );
   const isPublicRoute = publicRoutes.includes(path);
 
   // 3. Decrypt the session from the cookie
