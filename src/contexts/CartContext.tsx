@@ -6,9 +6,9 @@ import { useCartStore } from "@/store/useCartStore";
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: Product, quantity?: number) => void;
-  removeFromCart: (productId: string | number) => void;
-  updateQuantity: (productId: string | number, quantity: number) => void;
+  addToCart: (product: Product, quantity?: number, variant?: CartItem["variant"]) => void;
+  removeFromCart: (itemKey: string | number) => void;
+  updateQuantity: (itemKey: string | number, quantity: number) => void;
   clearCart: () => void;
   isCartOpen: boolean;
   setIsCartOpen: (isOpen: boolean) => void;
@@ -30,16 +30,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     store.setCartOpen(isOpen);
   };
 
-  const addToCart = (product: Product, quantity = 1) => {
-    store.addItem(product, quantity);
+  const addToCart = (product: Product, quantity = 1, variant?: CartItem["variant"]) => {
+    store.addItem(product, quantity, undefined, variant);
   };
 
-  const removeFromCart = (productId: string | number) => {
-    store.removeItem(productId);
+  const removeFromCart = (itemKey: string | number) => {
+    store.removeItem(itemKey);
   };
 
-  const updateQuantity = (productId: string | number, quantity: number) => {
-    store.updateQuantity(productId, quantity);
+  const updateQuantity = (itemKey: string | number, quantity: number) => {
+    store.updateQuantity(itemKey, quantity);
   };
 
   const clearCart = () => {

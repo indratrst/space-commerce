@@ -22,11 +22,21 @@ export const ProductSchema = z.object({
     .optional(),
 });
 
+export const ProductVariantSchema = z.object({
+  id: z.string(),
+  size: z.string(),
+  color: z.string().nullable().optional(),
+  stock: z.number(),
+});
+
 export const CartItemSchema = z.object({
   product: ProductSchema,
   quantity: z.number().min(1),
+  productVariantId: z.string().optional(),
+  variant: ProductVariantSchema.optional(),
 });
 
 export type Category = z.infer<typeof CategorySchema>;
 export type Product = z.infer<typeof ProductSchema>;
+export type ProductVariant = z.infer<typeof ProductVariantSchema>;
 export type CartItem = z.infer<typeof CartItemSchema>;

@@ -7,9 +7,14 @@ interface CartState {
   isCartOpen: boolean;
   
   // Actions
-  addItem: (product: Product, quantity?: number, maxStock?: number) => void;
-  removeItem: (productId: string | number) => void;
-  updateQuantity: (productId: string | number, quantity: number, maxStock?: number) => void;
+  addItem: (
+    product: Product,
+    quantity?: number,
+    maxStock?: number,
+    variant?: CartItem["variant"],
+  ) => void;
+  removeItem: (itemKey: string | number) => void;
+  updateQuantity: (itemKey: string | number, quantity: number, maxStock?: number) => void;
   clearCart: () => void;
   toggleCart: () => void;
   setCartOpen: (isOpen: boolean) => void;
@@ -19,57 +24,79 @@ interface CartState {
   getTotalPrice: () => number;
 }
 
+const makeItemKey = (productId: string, variantId?: string) =>
+  variantId ? `${productId}-${variantId}` : productId;
+
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
       isCartOpen: false,
 
-      addItem: (product, quantity = 1, maxStock) => {
+      addItem: (product, quantity = 1, maxStock, variant) => {
         const currentItems = get().items;
-        const existingItem = currentItems.find((item) => item.product.id === product.id);
+        const itemKey = makeItemKey(String(product.id), variant?.id);
+        const existingItem = currentItems.find(
+          (item) =>
+            makeItemKey(String(item.product.id), item.productVariantId) ===
+            itemKey,
+        );
 
         if (existingItem) {
           const newQuantity = existingItem.quantity + quantity;
-          // Apply maxStock if provided
           const finalQuantity = maxStock !== undefined ? Math.min(newQuantity, maxStock) : newQuantity;
-          
+
           set({
             items: currentItems.map((item) =>
-              item.product.id === product.id
+              makeItemKey(String(item.product.id), item.productVariantId) ===
+              itemKey
                 ? { ...item, quantity: finalQuantity }
-                : item
+                : item,
             ),
           });
         } else {
-          // New item, also respect maxStock
           const finalQuantity = maxStock !== undefined ? Math.min(quantity, maxStock) : quantity;
           set({
-            items: [...currentItems, { product, quantity: finalQuantity }],
+            items: [
+              ...currentItems,
+              {
+                product,
+                quantity: finalQuantity,
+                productVariantId: variant?.id,
+                variant: variant ? { ...variant } : undefined,
+              },
+            ],
           });
         }
 
         set({ isCartOpen: true });
       },
 
-      removeItem: (productId) => {
+      removeItem: (itemKey) => {
+        const key = String(itemKey);
         set({
-          items: get().items.filter((item) => item.product.id !== productId),
+          items: get().items.filter(
+            (item) =>
+              makeItemKey(String(item.product.id), item.productVariantId) !==
+              key,
+          ),
         });
       },
 
-      updateQuantity: (productId, quantity, maxStock) => {
+      updateQuantity: (itemKey, quantity, maxStock) => {
         if (quantity < 1) {
-          get().removeItem(productId);
+          get().removeItem(itemKey);
           return;
         }
 
-        // Apply maxStock if provided
+        const key = String(itemKey);
         const finalQuantity = maxStock !== undefined ? Math.min(quantity, maxStock) : quantity;
 
         set({
           items: get().items.map((item) =>
-            item.product.id === productId ? { ...item, quantity: finalQuantity } : item
+            makeItemKey(String(item.product.id), item.productVariantId) === key
+              ? { ...item, quantity: finalQuantity }
+              : item,
           ),
         });
       },

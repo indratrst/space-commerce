@@ -19,6 +19,7 @@ model User {
   email     String   @unique
   password  String
   role      Role     @default(USER)
+  orders    Order[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -44,19 +45,61 @@ model Product {
   categoryId  String
   category    Category         @relation(fields: [categoryId], references: [id])
   variants    ProductVariant[]
+  orderItems  OrderItem[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 }
 
 model ProductVariant {
-  id        String   @id @default(uuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  size      String   // e.g., "S", "M", "L", "XL", "One Size"
-  color     String?  // Optional, if you want color support later
-  stock     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String      @id @default(uuid())
+  productId  String
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size       String // e.g., "S", "M", "L", "XL", "One Size"
+  color      String? // Optional, if you want color support later
+  stock      Int         @default(0)
+  orderItems OrderItem[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   @@unique([productId, size, color]) // Ensure no duplicate sizes for the same product
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  // Dibuat opsional agar Guest bisa checkout tanpa harus membuat akun
+  userId          String?
+  user            User?        @relation(fields: [userId], references: [id])
+  // Tambahkan field untuk informasi Guest
+  customerName    String      // Gabungan first & last name
+  customerEmail   String
+  customerPhone   String
+  shippingAddress String?     // Opsional, jika butuh alamat
+  totalAmount     Float
+  status          OrderStatus @default(PENDING)
+  snapToken       String? // Untuk menyimpan token dari Midtrans Snap
+  snapRedirectUrl String? // URL pembayaran Midtrans
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id               String         @id @default(uuid())
+  orderId          String
+  order            Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productVariantId String
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  quantity         Int
+  priceAtPurchase  Float // Menyimpan harga saat dibeli (antisipasi perubahan harga produk)
+
+  products Product[]
+}
+
+enum OrderStatus {
+  PENDING
+  SETTLEMENT // Berhasil
+  PAID // Berhasil (alias)
+  EXPIRED // Gagal/Kadaluarsa
+  CANCEL // Dibatalkan
+  FAILED
 }

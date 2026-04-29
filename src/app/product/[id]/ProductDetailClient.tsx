@@ -34,7 +34,7 @@ export default function ProductDetailClient({
   const currentStock = selectedVariant ? selectedVariant.stock : totalStock;
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    addToCart(product, quantity, selectedVariant ?? undefined);
   };
 
   return (
