@@ -10,6 +10,7 @@ interface CartContextType {
     product: Product,
     quantity?: number,
     variant?: CartItem["variant"],
+    currentStock?: number,
   ) => void;
   removeFromCart: (itemKey: string | number) => void;
   updateQuantity: (itemKey: string | number, quantity: number) => void;

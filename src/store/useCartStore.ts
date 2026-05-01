@@ -54,6 +54,11 @@ export const useCartStore = create<CartState>()(
               ? Math.min(newQuantity, maxStock)
               : newQuantity;
 
+          // 🚨 Guard: jangan update kalau sudah mencapai maxStock
+          if (existingItem.quantity >= (maxStock ?? Infinity)) {
+            return; // tidak ada perubahan
+          }
+
           set({
             items: currentItems.map((item) =>
               getCartItemKey(item.product.id, item.productVariantId) === itemKey
