@@ -76,8 +76,15 @@ model Order {
   shippingAddress String?     // Opsional, jika butuh alamat
   totalAmount     Float
   status          OrderStatus @default(PENDING)
-  snapToken       String? // Untuk menyimpan token dari Midtrans Snap
-  snapRedirectUrl String? // URL pembayaran Midtrans
+
+ // Midtrans Related
+  snapToken       String? 
+  snapRedirectUrl String? 
+  paymentMethod   String?     // Contoh: "qris", "bank_transfer"
+  externalId      String?     @unique // ID dari Midtrans
+  
+  // Stock Control
+  stockReduced    Boolean     @default(false) // Flag krusial untuk Atomic Update
   items           OrderItem[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -91,6 +98,7 @@ model OrderItem {
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
   quantity         Int
   priceAtPurchase  Float // Menyimpan harga saat dibeli (antisipasi perubahan harga produk)
+  variantNameAtPurchase String?   // Contoh: "Nike Air Jordan - Blue - 42"
 
   products Product[]
 }
