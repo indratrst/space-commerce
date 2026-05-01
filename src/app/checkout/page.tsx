@@ -91,6 +91,7 @@ export default function CheckoutPage() {
           setErrorMsg("Pembayaran gagal. Silakan coba metode lain.");
         },
         onClose() {
+          clearCart();
           router.push(`/checkout/success?order_id=${order_id}&status=pending`);
         },
       });
