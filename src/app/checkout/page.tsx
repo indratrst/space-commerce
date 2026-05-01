@@ -4,21 +4,23 @@ import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
 import { ShippingSelector } from "@/components/checkout/ShippingSelector";
-import { PaymentSelector } from "@/components/checkout/PaymentSelector";
+// import { PaymentSelector } from "@/components/checkout/PaymentSelector";
 import { OrderSummary } from "@/components/checkout/OrderSummary";
 import { BillingAddress, ShippingRate } from "@/types/checkout";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-
+import { PaymentConfirmationModal } from "@/components/checkout/PaymentConfirmationModal";
 
 export default function CheckoutPage() {
   const { cart, cartTotal, clearCart } = useCart();
   const router = useRouter();
   const [billingData, setBillingData] = useState<Partial<BillingAddress>>({});
   const [shippingRate, setShippingRate] = useState<ShippingRate | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<string>("");
-  const [deliveryMethod, setDeliveryMethod] = useState<"shipping" | "pickup">("shipping");
+  // const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [deliveryMethod, setDeliveryMethod] = useState<"shipping" | "pickup">(
+    "shipping",
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -30,14 +32,18 @@ export default function CheckoutPage() {
     billingData.lastName &&
     billingData.email &&
     billingData.phone &&
-    (deliveryMethod === "pickup" || (billingData.areaId && billingData.address)) &&
-    (deliveryMethod === "pickup" || shippingRate) &&
-    paymentMethod;
+    (deliveryMethod === "pickup" ||
+      (billingData.areaId && billingData.address)) &&
+    (deliveryMethod === "pickup" || shippingRate);
+  // paymentMethod;
+
+  const handleConfirmPayment = async () => {
+    setIsSubmitting(true);
+    setErrorMsg(null);
+  };
 
   const handlePlaceOrder = async () => {
-    if (!isFormValid) return;
-    setErrorMsg(null);
-    setIsSubmitting(true);
+    // if (!isFormValid) return;
 
     try {
       // Step 1: Get Midtrans Snap token from our API
@@ -71,13 +77,13 @@ export default function CheckoutPage() {
         onSuccess(result) {
           clearCart();
           router.push(
-            `/checkout/success?order_id=${order_id}&status=success&payment_type=${result.payment_type || ""}`
+            `/checkout/success?order_id=${order_id}&status=success&payment_type=${result.payment_type || ""}`,
           );
         },
         onPending(result) {
           clearCart();
           router.push(
-            `/checkout/success?order_id=${order_id}&status=pending&payment_type=${result.payment_type || ""}`
+            `/checkout/success?order_id=${order_id}&status=pending&payment_type=${result.payment_type || ""}`,
           );
         },
         onError(result) {
@@ -85,7 +91,7 @@ export default function CheckoutPage() {
           setErrorMsg("Pembayaran gagal. Silakan coba metode lain.");
         },
         onClose() {
-          // User closed popup without completing — do nothing, allow retry
+          router.push(`/checkout/success?order_id=${order_id}&status=pending`);
         },
       });
     } catch (err: any) {
@@ -98,7 +104,9 @@ export default function CheckoutPage() {
   if (cart.length === 0 && !isSubmitting) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-4">
-        <h2 className="text-2xl font-bold uppercase tracking-widest">Your cart is empty</h2>
+        <h2 className="text-2xl font-bold uppercase tracking-widest">
+          Your cart is empty
+        </h2>
         <Link
           href="/products"
           className="bg-black text-white px-8 py-3 uppercase text-sm font-bold hover:bg-gray-800 transition-colors"
@@ -165,11 +173,13 @@ export default function CheckoutPage() {
 
           <CheckoutForm
             deliveryMethod={deliveryMethod}
-            onChange={(data) => setBillingData((prev) => ({ ...prev, ...data }))}
+            onChange={(data) =>
+              setBillingData((prev) => ({ ...prev, ...data }))
+            }
           />
 
           <div
-            className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t"
+            className="grid  md:grid-cols-1 gap-8 pt-8 border-t"
             style={{ borderColor: "var(--surface-border)" }}
           >
             {deliveryMethod === "shipping" ? (
@@ -191,7 +201,6 @@ export default function CheckoutPage() {
                 </p>
               </div>
             )}
-            <PaymentSelector onSelect={(methodId) => setPaymentMethod(methodId)} />
           </div>
 
           {/* Error Message */}
@@ -204,26 +213,61 @@ export default function CheckoutPage() {
 
         {/* Right Column: Summary */}
         <div className="lg:col-span-4 sticky top-24 self-start">
-          <OrderSummary items={cart} subtotal={cartTotal} shippingRate={shippingRate} />
+          <OrderSummary
+            items={cart}
+            subtotal={cartTotal}
+            shippingRate={shippingRate}
+          />
 
-          <button
+          {/* <button
             id="place-order-btn"
-            onClick={handlePlaceOrder}
-            disabled={!isFormValid || isSubmitting}
+            onClick={handleConfirmPayment}
+            disabled={!isFormValid}
             className={`w-full mt-6 py-4 uppercase font-bold tracking-widest transition-all shadow-md flex items-center justify-center gap-2 ${
-              isFormValid && !isSubmitting
+              isFormValid
                 ? "bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 scale-[1.02]"
                 : "bg-surface text-muted-foreground opacity-50 cursor-not-allowed border border-dashed"
             }`}
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="h-5 w-5 animate-spin" /> Menyiapkan pembayaran...
+                <Loader2 className="h-5 w-5 animate-spin" /> Menyiapkan
+                pembayaran...
+              </>
+            ) : (
+              "Bayar Sekarang"
+            )}
+          </button> */}
+
+          <button
+            id="place-order-btn"
+            onClick={handleConfirmPayment}
+            disabled={!isFormValid}
+            className={`w-full mt-6 py-4 uppercase font-bold tracking-widest transition-all shadow-md flex items-center justify-center gap-2 ${
+              isFormValid
+                ? "bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 scale-[1.02]"
+                : "bg-surface text-muted-foreground opacity-50 cursor-not-allowed border border-dashed"
+            }`}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" /> Menyiapkan
+                pembayaran...
               </>
             ) : (
               "Bayar Sekarang"
             )}
           </button>
+
+          <PaymentConfirmationModal
+            isOpen={isSubmitting}
+            onClose={() => setIsSubmitting(false)}
+            onConfirm={handlePlaceOrder}
+            items={cart}
+            deliveryMethod={deliveryMethod}
+            shippingRate={shippingRate}
+            total={totalAmount}
+          />
 
           {isFormValid && !isSubmitting && (
             <div className="flex items-center justify-center gap-1.5 mt-3">
