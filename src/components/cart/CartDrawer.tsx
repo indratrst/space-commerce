@@ -6,6 +6,7 @@ import { X, Plus, Minus, Trash2, ShoppingBag, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Product } from "@/types";
+// import { getItemStock } from "@/lib/cart";
 
 export function CartDrawer() {
   const {
@@ -18,52 +19,7 @@ export function CartDrawer() {
     cartTotal,
   } = useCart();
 
-  // const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
-
-  // Fetch recommendations from API
-  // useEffect(() => {
-  //   if (!isCartOpen) return;
-
-  //   async function fetchRecommendations() {
-  //     try {
-  //       const res = await fetch("/api/products");
-  //       if (res.ok) {
-  //         const allProducts = await res.json();
-  //         const cartIds = cart.map((item) => String(item.product.id));
-  //         const filtered = allProducts
-  //           .filter((p: { id: string }) => !cartIds.includes(String(p.id)))
-  //           .slice(0, 4)
-  //           .map(
-  //             (p: {
-  //               id: string;
-  //               title: string;
-  //               price: number;
-  //               description: string;
-  //               category: { name: string };
-  //               image: string | null;
-  //               ratingRate: number | null;
-  //               ratingCount: number | null;
-  //             }) => ({
-  //               id: p.id,
-  //               title: p.title,
-  //               price: p.price,
-  //               description: p.description,
-  //               category: p.category?.name || "",
-  //               image: p.image ?? undefined,
-  //               rating: {
-  //                 rate: p.ratingRate ?? 0,
-  //                 count: p.ratingCount ?? 0,
-  //               },
-  //             }),
-  //           );
-  //         setRecommendedProducts(filtered);
-  //       }
-  //     } catch (error) {
-  //       console.error("Failed to fetch recommendations:", error);
-  //     }
-  //   }
-  //   fetchRecommendations();
-  // }, [isCartOpen, cart]);
+  // const stock = getItemStock(cart);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
