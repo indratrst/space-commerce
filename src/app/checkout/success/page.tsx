@@ -13,15 +13,18 @@ import {
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { stat } from "fs";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order_id");
-  const status = searchParams.get("status") || "success";
+  const [status, setStatus] = useState("");
   const paymentType = searchParams.get("payment_type") || "";
   const [copied, setCopied] = useState(false);
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const isPending = status === "pending";
+  // const isPending = status === "pending";
 
   const handleCopy = () => {
     if (orderId) {
@@ -46,17 +49,46 @@ function SuccessContent() {
     return map[type] || type || "—";
   };
 
+  useEffect(() => {
+    if (!orderId) return;
+
+    const fetchOrder = async () => {
+      try {
+        const res = await fetch(`/api/order/${orderId}`);
+        const data = await res.json();
+
+        console.log("Fetched Order:", data);
+
+        setOrder(data);
+        setStatus(data.status);
+        if (data.status === "PAID" || data.status === "SETTLEMENT") {
+          clearInterval(interval);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrder();
+
+    const interval = setInterval(fetchOrder, 3000);
+
+    return () => clearInterval(interval);
+  }, [orderId]);
+
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 text-center py-20">
       {/* Icon */}
       <div
         className={`p-5 rounded-full mb-6 animate-[fadeIn_0.5s_ease] ${
-          isPending
+          status === "PENDING"
             ? "bg-yellow-50 text-yellow-500 dark:bg-yellow-900/20"
             : "bg-green-50 text-green-600 dark:bg-green-900/20"
         }`}
       >
-        {isPending ? (
+        {status === "PENDING" ? (
           <Clock className="h-16 w-16" />
         ) : (
           <CheckCircle className="h-16 w-16" />
@@ -65,11 +97,11 @@ function SuccessContent() {
 
       {/* Title */}
       <h1 className="text-4xl md:text-5xl font-extrabold uppercase tracking-tighter mb-4">
-        {isPending ? "Menunggu Pembayaran" : "Pembayaran Berhasil!"}
+        {status === "PENDING" ? "Menunggu Pembayaran" : "Pembayaran Berhasil!"}
       </h1>
 
       <p className="text-muted-foreground max-w-md mb-8 leading-relaxed">
-        {isPending
+        {status === "PENDING"
           ? "Pesanan Anda sedang menunggu konfirmasi pembayaran. Selesaikan pembayaran sebelum waktu berakhir."
           : "Terima kasih atas pembelian Anda! Pesanan sedang diproses dan akan segera dikirimkan."}
       </p>
@@ -85,7 +117,9 @@ function SuccessContent() {
               ID Pesanan
             </p>
             <div className="flex items-center gap-2">
-              <p className="text-sm font-mono font-bold truncate flex-1">{orderId}</p>
+              <p className="text-sm font-mono font-bold truncate flex-1">
+                {orderId}
+              </p>
               <button
                 onClick={handleCopy}
                 className="shrink-0 p-1.5 hover:bg-black/5 rounded transition-colors"
@@ -115,23 +149,40 @@ function SuccessContent() {
           </div>
         )}
 
+        {order?.status === "PENDING" && (
+          <>
+            <p className="text-yellow-600 font-medium">
+              Silakan selesaikan pembayaran kamu
+            </p>
+
+            {order.snapRedirectUrl && (
+              <button
+                onClick={() => window.open(order.snapRedirectUrl, "_blank")}
+                className="bg-surface text-muted-foreground opacity-50 border border-dashed rounded-md px-4 py-2 text-sm font-bold uppercase tracking-wide"
+              >
+                Lanjutkan Pembayaran
+              </button>
+            )}
+          </>
+        )}
+
         <div>
           <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">
             Status
           </p>
           <span
             className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase px-3 py-1 rounded-full ${
-              isPending
+              status === "PENDING"
                 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                 : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
             }`}
           >
             <span
               className={`h-1.5 w-1.5 rounded-full ${
-                isPending ? "bg-yellow-500" : "bg-green-500"
+                status === "PENDING" ? "bg-yellow-500" : "bg-green-500"
               }`}
             />
-            {isPending ? "Pending" : "Lunas"}
+            {status === "PENDING" ? "Pending" : "Lunas"}
           </span>
         </div>
       </div>

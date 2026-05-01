@@ -20,8 +20,8 @@ function PendingContent() {
       </h1>
 
       <p className="text-muted-foreground max-w-md mb-8 leading-relaxed">
-        Pesanan Anda telah dibuat. Selesaikan pembayaran melalui instruksi yang dikirim ke email
-        Anda, atau cek aplikasi pembayaran Anda.
+        Pesanan Anda telah dibuat. Selesaikan pembayaran melalui instruksi yang
+        dikirim ke email Anda, atau cek aplikasi pembayaran Anda.
       </p>
 
       {orderId && (
@@ -29,7 +29,9 @@ function PendingContent() {
           className="bg-surface border rounded-xl p-6 mb-10 w-full max-w-sm text-left"
           style={{ borderColor: "var(--surface-border)" }}
         >
-          <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">ID Pesanan</p>
+          <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">
+            ID Pesanan
+          </p>
           <p className="text-sm font-mono font-bold break-all">{orderId}</p>
         </div>
       )}
@@ -37,7 +39,8 @@ function PendingContent() {
       <div className="flex items-center gap-2 mb-8 text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 px-4 py-3 rounded-lg">
         <RefreshCw className="h-4 w-4 shrink-0" />
         <p className="text-xs font-medium text-left">
-          Status pesanan akan diperbarui otomatis setelah pembayaran dikonfirmasi.
+          Status pesanan akan diperbarui otomatis setelah pembayaran
+          dikonfirmasi.
         </p>
       </div>
 
