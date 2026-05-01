@@ -18,7 +18,7 @@ import { stat } from "fs";
 function SuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order_id");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("PENDING");
   const paymentType = searchParams.get("payment_type") || "";
   const [copied, setCopied] = useState(false);
   const [order, setOrder] = useState<any>(null);
@@ -49,6 +49,25 @@ function SuccessContent() {
     return map[type] || type || "—";
   };
 
+  const fetchOrder = async () => {
+    try {
+      const res = await fetch(`/api/order/${orderId}`);
+      const data = await res.json();
+
+      console.log("Fetched Order:", data);
+
+      setOrder(data);
+      setStatus(data.status);
+      // if (data.status === "PAID" || data.status === "SETTLEMENT") {
+      //   clearInterval(interval);
+      // }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!orderId) return;
 
@@ -61,9 +80,9 @@ function SuccessContent() {
 
         setOrder(data);
         setStatus(data.status);
-        if (data.status === "PAID" || data.status === "SETTLEMENT") {
-          clearInterval(interval);
-        }
+        // if (data.status === "PAID" || data.status === "SETTLEMENT") {
+        //   clearInterval(interval);
+        // }
       } catch (err) {
         console.error(err);
       } finally {
@@ -73,9 +92,9 @@ function SuccessContent() {
 
     fetchOrder();
 
-    const interval = setInterval(fetchOrder, 3000);
+    // const interval = setInterval(fetchOrder, 3000);
 
-    return () => clearInterval(interval);
+    // return () => clearInterval(interval);
   }, [orderId]);
 
   return (
@@ -165,6 +184,14 @@ function SuccessContent() {
             )}
           </>
         )}
+
+        <button
+          disabled={status !== "PENDING"}
+          onClick={() => fetchOrder()}
+          className="bg-surface text-muted-foreground opacity-50 border border-dashed rounded-md px-4 py-2 text-sm font-bold uppercase tracking-wide cursor-pointer"
+        >
+          Cek Status Pembayaran
+        </button>
 
         <div>
           <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">
