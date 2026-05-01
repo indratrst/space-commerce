@@ -5,7 +5,7 @@ import { Product, CartItem } from "@/types";
 interface CartState {
   items: CartItem[];
   isCartOpen: boolean;
-  
+
   // Actions
   addItem: (
     product: Product,
@@ -14,18 +14,24 @@ interface CartState {
     variant?: CartItem["variant"],
   ) => void;
   removeItem: (itemKey: string | number) => void;
-  updateQuantity: (itemKey: string | number, quantity: number, maxStock?: number) => void;
+  updateQuantity: (
+    itemKey: string | number,
+    quantity: number,
+    maxStock?: number,
+  ) => void;
   clearCart: () => void;
   toggleCart: () => void;
   setCartOpen: (isOpen: boolean) => void;
-  
+
   // Getters (computed as values)
   getTotalItems: () => number;
   getTotalPrice: () => number;
 }
 
-const makeItemKey = (productId: string, variantId?: string) =>
-  variantId ? `${productId}-${variantId}` : productId;
+export const getCartItemKey = (
+  productId: string | number,
+  variantId?: string,
+) => (variantId ? `${productId}-${variantId}` : String(productId));
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -35,27 +41,29 @@ export const useCartStore = create<CartState>()(
 
       addItem: (product, quantity = 1, maxStock, variant) => {
         const currentItems = get().items;
-        const itemKey = makeItemKey(String(product.id), variant?.id);
+        const itemKey = getCartItemKey(product.id, variant?.id);
         const existingItem = currentItems.find(
           (item) =>
-            makeItemKey(String(item.product.id), item.productVariantId) ===
-            itemKey,
+            getCartItemKey(item.product.id, item.productVariantId) === itemKey,
         );
 
         if (existingItem) {
           const newQuantity = existingItem.quantity + quantity;
-          const finalQuantity = maxStock !== undefined ? Math.min(newQuantity, maxStock) : newQuantity;
+          const finalQuantity =
+            maxStock !== undefined
+              ? Math.min(newQuantity, maxStock)
+              : newQuantity;
 
           set({
             items: currentItems.map((item) =>
-              makeItemKey(String(item.product.id), item.productVariantId) ===
-              itemKey
+              getCartItemKey(item.product.id, item.productVariantId) === itemKey
                 ? { ...item, quantity: finalQuantity }
                 : item,
             ),
           });
         } else {
-          const finalQuantity = maxStock !== undefined ? Math.min(quantity, maxStock) : quantity;
+          const finalQuantity =
+            maxStock !== undefined ? Math.min(quantity, maxStock) : quantity;
           set({
             items: [
               ...currentItems,
@@ -77,8 +85,7 @@ export const useCartStore = create<CartState>()(
         set({
           items: get().items.filter(
             (item) =>
-              makeItemKey(String(item.product.id), item.productVariantId) !==
-              key,
+              getCartItemKey(item.product.id, item.productVariantId) !== key,
           ),
         });
       },
@@ -90,11 +97,12 @@ export const useCartStore = create<CartState>()(
         }
 
         const key = String(itemKey);
-        const finalQuantity = maxStock !== undefined ? Math.min(quantity, maxStock) : quantity;
+        const finalQuantity =
+          maxStock !== undefined ? Math.min(quantity, maxStock) : quantity;
 
         set({
           items: get().items.map((item) =>
-            makeItemKey(String(item.product.id), item.productVariantId) === key
+            getCartItemKey(item.product.id, item.productVariantId) === key
               ? { ...item, quantity: finalQuantity }
               : item,
           ),
@@ -112,12 +120,15 @@ export const useCartStore = create<CartState>()(
       },
 
       getTotalPrice: () => {
-        return get().items.reduce((total, item) => total + item.product.price * item.quantity, 0);
+        return get().items.reduce(
+          (total, item) => total + item.product.price * item.quantity,
+          0,
+        );
       },
     }),
     {
       name: "shopping-cart-storage", // key in localStorage
       storage: createJSONStorage(() => localStorage),
-    }
-  )
+    },
+  ),
 );

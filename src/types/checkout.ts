@@ -28,6 +28,18 @@ export interface PaymentMethod {
   icon?: string;
 }
 
+// export interface OrderItem {
+//   productVariantId: string;
+//   quantity: number;
+//   priceAtPurchase: number;
+//   variantNameAtPurchase: string; // Tambahkan ini
+//   product: {
+//     id: string | number;
+//     title: string;
+//     image: string;
+//   };
+// }
+
 export interface OrderData {
   billingAddress: BillingAddress;
   shippingRate: ShippingRate | null;

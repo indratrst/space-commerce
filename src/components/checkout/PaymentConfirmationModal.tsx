@@ -1,6 +1,8 @@
 "use client";
 
 import { CartItem } from "@/types";
+import { ShippingRate } from "@/types/checkout";
+import { getCartItemKey } from "@/store/useCartStore";
 import { X, CheckCircle2, AlertCircle, ShoppingBag } from "lucide-react";
 
 interface PaymentConfirmationModalProps {
@@ -8,6 +10,8 @@ interface PaymentConfirmationModalProps {
   onClose: () => void;
   onConfirm: () => void;
   items: CartItem[];
+  deliveryMethod: "shipping" | "pickup";
+  shippingRate: ShippingRate | null;
   total: number;
 }
 
@@ -16,6 +20,8 @@ export function PaymentConfirmationModal({
   onClose,
   onConfirm,
   items,
+  deliveryMethod,
+  shippingRate,
   total,
 }: PaymentConfirmationModalProps) {
   if (!isOpen) return null;
@@ -50,7 +56,10 @@ export function PaymentConfirmationModal({
 
           <div className="space-y-4 mb-8 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
             {items.map((item) => {
-              const itemKey = item.productVariantId ?? item.product.id;
+              const itemKey = getCartItemKey(
+                item.product.id,
+                item.productVariantId,
+              );
               return (
                 <div
                   key={itemKey}
@@ -94,7 +103,23 @@ export function PaymentConfirmationModal({
               );
             })}
           </div>
-
+          <div className="bg-black text-white p-6 rounded-xl mb-1 flex justify-between items-center shadow-lg">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest opacity-60">
+                Delivery Method:
+              </p>
+              <div className="flex items-center gap-2">
+                <h4 className="capitalize">{deliveryMethod} - </h4>
+                <p
+                  className={`text-xl font-black ${shippingRate?.price === 0 ? "line-through opacity-60" : ""}`}
+                >
+                  {shippingRate?.price === 0
+                    ? `Rp ${shippingRate?.price.toLocaleString("id-ID")}`
+                    : "Free"}
+                </p>
+              </div>
+            </div>
+          </div>
           <div className="bg-black text-white p-6 rounded-xl mb-8 flex justify-between items-center shadow-lg">
             <div>
               <p className="text-[10px] uppercase tracking-widest opacity-60">

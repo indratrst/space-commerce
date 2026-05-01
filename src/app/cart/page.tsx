@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "@/contexts/CartContext";
+import { getCartItemKey } from "@/store/useCartStore";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { ProductCard } from "@/components/ui/ProductCard";
@@ -111,7 +112,10 @@ export default function CartPage() {
             style={{ borderColor: "var(--surface-border)" }}
           >
             {cart.map((item) => {
-              const itemKey = item.productVariantId ?? item.product.id;
+              const itemKey = getCartItemKey(
+                item.product.id,
+                item.productVariantId,
+              );
               return (
                 <li
                   key={itemKey}
@@ -153,7 +157,10 @@ export default function CartPage() {
                       <button
                         onClick={() =>
                           removeFromCart(
-                            item.productVariantId ?? item.product.id,
+                            getCartItemKey(
+                              item.product.id,
+                              item.productVariantId,
+                            ),
                           )
                         }
                         className="text-sm text-red-500 font-medium hover:text-red-700 uppercase flex items-center gap-1"
@@ -194,7 +201,10 @@ export default function CartPage() {
                         className="px-3 py-2 hover:opacity-70 transition-opacity"
                         onClick={() =>
                           updateQuantity(
-                            item.productVariantId ?? item.product.id,
+                            getCartItemKey(
+                              item.product.id,
+                              item.productVariantId,
+                            ),
                             item.quantity - 1,
                           )
                         }
@@ -211,7 +221,10 @@ export default function CartPage() {
                         className="px-3 py-2 hover:opacity-70 transition-opacity"
                         onClick={() =>
                           updateQuantity(
-                            item.productVariantId ?? item.product.id,
+                            getCartItemKey(
+                              item.product.id,
+                              item.productVariantId,
+                            ),
                             item.quantity + 1,
                           )
                         }

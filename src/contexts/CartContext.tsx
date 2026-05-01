@@ -6,7 +6,11 @@ import { useCartStore } from "@/store/useCartStore";
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: Product, quantity?: number, variant?: CartItem["variant"]) => void;
+  addToCart: (
+    product: Product,
+    quantity?: number,
+    variant?: CartItem["variant"],
+  ) => void;
   removeFromCart: (itemKey: string | number) => void;
   updateQuantity: (itemKey: string | number, quantity: number) => void;
   clearCart: () => void;
@@ -30,7 +34,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     store.setCartOpen(isOpen);
   };
 
-  const addToCart = (product: Product, quantity = 1, variant?: CartItem["variant"]) => {
+  const addToCart = (
+    product: Product,
+    quantity = 1,
+    variant?: CartItem["variant"],
+  ) => {
     store.addItem(product, quantity, undefined, variant);
   };
 
@@ -78,4 +86,3 @@ export function useCart() {
   }
   return context;
 }
-

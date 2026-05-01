@@ -2,6 +2,7 @@
 
 import { CartItem } from "@/types";
 import { ShippingRate } from "@/types/checkout";
+import { getCartItemKey } from "@/store/useCartStore";
 import { ShoppingBag } from "lucide-react";
 
 interface OrderSummaryProps {
@@ -26,7 +27,10 @@ export function OrderSummary({
 
       <div className="space-y-4 max-h-[40vh] overflow-y-auto mb-6 pr-2 custom-scrollbar">
         {items.map((item) => {
-          const itemKey = item.productVariantId ?? item.product.id;
+          const itemKey = getCartItemKey(
+            item.product.id,
+            item.productVariantId,
+          );
           return (
             <div key={itemKey} className="flex gap-4 items-start">
               <div
@@ -82,7 +86,13 @@ export function OrderSummary({
           <span className="text-muted-foreground uppercase tracking-tight">
             Shipping
           </span>
-          <span className="font-bold">
+          <span
+            className={`font-bold ${
+              shippingRate?.price === 0
+                ? "line-through text-muted-foreground"
+                : ""
+            }`}
+          >
             {shippingRate
               ? `Rp ${shippingRate.price.toLocaleString("id-ID")}`
               : "Calculated at next step"}

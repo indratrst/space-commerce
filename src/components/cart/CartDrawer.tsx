@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "@/contexts/CartContext";
+import { getCartItemKey } from "@/store/useCartStore";
 import { X, Plus, Minus, Trash2, ShoppingBag, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -130,7 +131,10 @@ export function CartDrawer() {
           ) : (
             <ul className="space-y-6">
               {cart.map((item) => {
-                const itemKey = item.productVariantId ?? item.product.id;
+                const itemKey = getCartItemKey(
+                  item.product.id,
+                  item.productVariantId,
+                );
                 return (
                   <li
                     key={itemKey}
@@ -316,14 +320,11 @@ export function CartDrawer() {
               >
                 View Cart
               </Link>
-              <button
-                className="w-full py-3 bg-black text-white font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
-                onClick={() => {
-                  alert("Checkout functionality not implemented in UI mockup.");
-                }}
-              >
-                Checkout
-              </button>
+              <Link href="/checkout" onClick={() => setIsCartOpen(false)}>
+                <button className="w-full py-3 bg-black text-white font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors">
+                  Checkout
+                </button>
+              </Link>
             </div>
           </div>
         )}
