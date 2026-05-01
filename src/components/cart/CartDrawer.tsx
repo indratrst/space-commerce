@@ -18,52 +18,52 @@ export function CartDrawer() {
     cartTotal,
   } = useCart();
 
-  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
+  // const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
 
   // Fetch recommendations from API
-  useEffect(() => {
-    if (!isCartOpen) return;
+  // useEffect(() => {
+  //   if (!isCartOpen) return;
 
-    async function fetchRecommendations() {
-      try {
-        const res = await fetch("/api/products");
-        if (res.ok) {
-          const allProducts = await res.json();
-          const cartIds = cart.map((item) => String(item.product.id));
-          const filtered = allProducts
-            .filter((p: { id: string }) => !cartIds.includes(String(p.id)))
-            .slice(0, 4)
-            .map(
-              (p: {
-                id: string;
-                title: string;
-                price: number;
-                description: string;
-                category: { name: string };
-                image: string | null;
-                ratingRate: number | null;
-                ratingCount: number | null;
-              }) => ({
-                id: p.id,
-                title: p.title,
-                price: p.price,
-                description: p.description,
-                category: p.category?.name || "",
-                image: p.image ?? undefined,
-                rating: {
-                  rate: p.ratingRate ?? 0,
-                  count: p.ratingCount ?? 0,
-                },
-              }),
-            );
-          setRecommendedProducts(filtered);
-        }
-      } catch (error) {
-        console.error("Failed to fetch recommendations:", error);
-      }
-    }
-    fetchRecommendations();
-  }, [isCartOpen, cart]);
+  //   async function fetchRecommendations() {
+  //     try {
+  //       const res = await fetch("/api/products");
+  //       if (res.ok) {
+  //         const allProducts = await res.json();
+  //         const cartIds = cart.map((item) => String(item.product.id));
+  //         const filtered = allProducts
+  //           .filter((p: { id: string }) => !cartIds.includes(String(p.id)))
+  //           .slice(0, 4)
+  //           .map(
+  //             (p: {
+  //               id: string;
+  //               title: string;
+  //               price: number;
+  //               description: string;
+  //               category: { name: string };
+  //               image: string | null;
+  //               ratingRate: number | null;
+  //               ratingCount: number | null;
+  //             }) => ({
+  //               id: p.id,
+  //               title: p.title,
+  //               price: p.price,
+  //               description: p.description,
+  //               category: p.category?.name || "",
+  //               image: p.image ?? undefined,
+  //               rating: {
+  //                 rate: p.ratingRate ?? 0,
+  //                 count: p.ratingCount ?? 0,
+  //               },
+  //             }),
+  //           );
+  //         setRecommendedProducts(filtered);
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to fetch recommendations:", error);
+  //     }
+  //   }
+  //   fetchRecommendations();
+  // }, [isCartOpen, cart]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -168,10 +168,15 @@ export function CartDrawer() {
                           >
                             {item.product.title}
                           </h3>
-                          {item.variant?.size && (
-                            <p className="text-xs text-muted-foreground uppercase tracking-widest">
-                              Size: {item.variant.size}
-                            </p>
+                          {item.variant?.size && item.variant?.stock && (
+                            <>
+                              <p className="text-xs text-muted-foreground uppercase tracking-widest py-1">
+                                Size: {item.variant.size}
+                              </p>
+                              <p className="text-xs text-muted-foreground uppercase tracking-widest">
+                                Stock: {item.variant.stock}
+                              </p>
+                            </>
                           )}
                           <p
                             className="mt-1 text-sm font-medium"
@@ -212,8 +217,14 @@ export function CartDrawer() {
                           </span>
                           <button
                             className="px-2 py-1 hover:opacity-70 transition-opacity"
+                            disabled={item.quantity === item.variant?.stock}
                             onClick={() =>
-                              updateQuantity(itemKey, item.quantity + 1)
+                              updateQuantity(
+                                itemKey,
+                                item.quantity < item.variant?.stock
+                                  ? item.quantity + 1
+                                  : item.quantity,
+                              )
                             }
                           >
                             <Plus className="h-3 w-3" />
@@ -237,7 +248,7 @@ export function CartDrawer() {
           )}
 
           {/* Recommended Section inline with the scrollable area */}
-          <div
+          {/* <div
             className="mt-6 pt-6 border-t"
             style={{ borderColor: "var(--surface-border)" }}
           >
@@ -290,7 +301,7 @@ export function CartDrawer() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
         </div>
 
         {cart.length > 0 && (
