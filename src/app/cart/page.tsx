@@ -219,13 +219,16 @@ export default function CartPage() {
                       </span>
                       <button
                         className="px-3 py-2 hover:opacity-70 transition-opacity"
+                        disabled={item.quantity === item.variant?.stock}
                         onClick={() =>
                           updateQuantity(
                             getCartItemKey(
                               item.product.id,
                               item.productVariantId,
                             ),
-                            item.quantity + 1,
+                            item.quantity < item.variant?.stock
+                              ? item.quantity + 1
+                              : item.quantity,
                           )
                         }
                       >

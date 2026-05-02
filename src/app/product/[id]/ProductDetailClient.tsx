@@ -2,7 +2,7 @@
 
 import { useCart } from "@/contexts/CartContext";
 import { Minus, Plus, ShoppingBag, ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Product } from "@/types";
 
@@ -38,15 +38,23 @@ export default function ProductDetailClient({
       item.product.id === product.id &&
       item.productVariantId === selectedVariant?.id,
   );
+
   const cartQuantity = cartItem ? cartItem.quantity : 0;
+  const remainingStock = currentStock - cartQuantity;
 
   const handleAddToCart = () => {
-    // Jika quantity di cart sudah sama dengan stok, jangan tambah lagi
-    if (cartQuantity >= currentStock) {
-      alert("Sudah mencapai stok maksimal untuk produk ini");
+    if (remainingStock <= 0) {
+      alert("Stok habis di keranjang");
       return;
     }
-    addToCart(product, quantity, selectedVariant ?? undefined, currentStock);
+    const safeQuantity = Math.min(quantity, remainingStock);
+    setQuantity(1);
+    addToCart(
+      product,
+      safeQuantity,
+      selectedVariant ?? undefined,
+      currentStock,
+    );
   };
 
   return (
@@ -191,6 +199,7 @@ export default function ProductDetailClient({
                 {quantity}
               </span>
               <button
+                disabled={quantity >= remainingStock}
                 className="px-4 py-3 hover:opacity-70 transition-opacity"
                 onClick={() =>
                   setQuantity((q) => Math.min(currentStock, q + 1))

@@ -48,17 +48,19 @@ export const useCartStore = create<CartState>()(
         );
 
         if (existingItem) {
-          const newQuantity = existingItem.quantity + quantity;
-          const finalQuantity =
-            maxStock !== undefined
-              ? Math.min(newQuantity, maxStock)
-              : newQuantity;
+          const currentQty = existingItem.quantity;
 
-          // 🚨 Guard: jangan update kalau sudah mencapai maxStock
-          if (existingItem.quantity >= (maxStock ?? Infinity)) {
-            return; // tidak ada perubahan
-          }
+          // 🔥 hitung sisa stok yang bisa ditambah
+          const remainingStock =
+            maxStock !== undefined ? maxStock - currentQty : Infinity;
 
+          // kalau sudah habis
+          if (remainingStock <= 0) return;
+
+          // 🔥 jangan lebih dari sisa stok
+          const allowedQuantity = Math.min(quantity, remainingStock);
+
+          const finalQuantity = currentQty + allowedQuantity;
           set({
             items: currentItems.map((item) =>
               getCartItemKey(item.product.id, item.productVariantId) === itemKey
