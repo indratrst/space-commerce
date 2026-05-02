@@ -14,8 +14,8 @@ export async function GET(request: Request) {
     }
     if (search) {
       where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -23,7 +23,9 @@ export async function GET(request: Request) {
       where,
       include: {
         category: true,
-        variants: true,
+        variants: {
+          where: { isActive: true },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -33,7 +35,7 @@ export async function GET(request: Request) {
     console.error("Failed to fetch products:", error);
     return NextResponse.json(
       { error: "Failed to fetch products" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -41,7 +43,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== "SUPERUSER" && session.role !== "ADMIN")) {
+    if (
+      !session ||
+      (session.role !== "SUPERUSER" && session.role !== "ADMIN")
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -51,7 +56,7 @@ export async function POST(request: Request) {
     const product = await prisma.product.create({
       data: {
         title,
-        price: parseFloat(price),
+        price: parseInt(price),
         description,
         image,
         categoryId,
@@ -60,6 +65,7 @@ export async function POST(request: Request) {
             size: v.size,
             stock: parseInt(v.stock),
             color: v.color || null,
+            isActive: true,
           })),
         },
       },
@@ -74,7 +80,7 @@ export async function POST(request: Request) {
     console.error("Failed to create product:", error);
     return NextResponse.json(
       { error: "Failed to create product" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
