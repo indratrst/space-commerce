@@ -9,9 +9,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  allowedDevOrigins: [
-    'repository-manitoba-petition-goes.trycloudflare.com',
-  ],
+  allowedDevOrigins: ["citizen-checked-branches-request.trycloudflare.com"],
 };
 
 export default nextConfig;
