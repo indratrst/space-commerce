@@ -56,6 +56,18 @@ export default function ProductDetailClient({
       currentStock,
     );
   };
+  const getStockColor = (currentStock: number) => {
+    if (currentStock === 0) return "text-red-500";
+    if (currentStock < 5) return "text-orange-500";
+    return "text-white";
+  };
+
+  const getStockMessage = (currentStock: number) => {
+    if (currentStock === 0) return "Out of Stock";
+    if (currentStock === 1) return `Only 1 left!`;
+    if (currentStock < 5) return `Only ${currentStock} left!`; // Optional: untuk currentStock 2-4
+    return `${currentStock} in stock`;
+  };
 
   return (
     <div className="container mx-auto px-4 py-12 md:py-20 max-w-6xl">
@@ -145,7 +157,6 @@ export default function ProductDetailClient({
                   <button
                     key={variant.id}
                     onClick={() => setSelectedSize(variant.size)}
-                    disabled={variant.stock === 0}
                     className={`px-4 py-2 border-2 text-sm font-bold uppercase tracking-wide transition-all duration-200 ${
                       selectedSize === variant.size
                         ? "bg-black text-white border-black"
@@ -168,13 +179,13 @@ export default function ProductDetailClient({
                   </button>
                 ))}
               </div>
-              {selectedVariant &&
+              {/* {selectedVariant &&
                 selectedVariant.stock <= 5 &&
                 selectedVariant.stock > 0 && (
                   <p className="text-xs text-red-500 mt-2 font-medium">
                     Only {selectedVariant.stock} left in stock!
                   </p>
-                )}
+                )} */}
             </div>
           )}
 
@@ -209,10 +220,9 @@ export default function ProductDetailClient({
               </button>
             </div>
             <p
-              className="text-sm font-bold uppercase tracking-widest"
-              style={{ color: "var(--muted)" }}
+              className={`text-sm font-bold uppercase tracking-widest ${getStockColor(currentStock)}`}
             >
-              {currentStock} in stock
+              {getStockMessage(currentStock)}
             </p>
           </div>
 
