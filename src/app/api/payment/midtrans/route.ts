@@ -21,6 +21,8 @@ export async function POST(request: Request) {
         productVariantId: string;
         quantity: number;
         priceAtPurchase: number;
+        stockReduced?: boolean;
+        variantSnapshot?: JSON;
       }>;
 
       for (const item of items) {
@@ -46,6 +48,7 @@ export async function POST(request: Request) {
           productVariantId: resolvedVariantId,
           quantity: item.quantity,
           priceAtPurchase: item.product.price,
+          variantSnapshot: JSON.parse(JSON.stringify(item.variant || {})),
         });
       }
 
@@ -55,7 +58,7 @@ export async function POST(request: Request) {
           customerName: `${billingData.firstName} ${billingData.lastName}`,
           customerEmail: billingData.email,
           customerPhone: billingData.phone,
-          shippingAddress: billingData.address || "OTS",
+          shippingAddress: billingData.address || "Pickup",
           totalAmount: total,
           status: "PENDING",
           items: {
@@ -64,6 +67,20 @@ export async function POST(request: Request) {
         },
       });
     });
+
+    const shippingItem =
+      shippingCost > 0
+        ? [
+            {
+              id: "SHIPPING",
+              price: shippingCost,
+              quantity: 1,
+              name: shippingRate?.courier_name
+                ? `Ongkir - ${shippingRate.courier_name} ${shippingRate.courier_service_name}`
+                : "Ongkos Kirim",
+            },
+          ]
+        : [];
 
     const transactionPayload = {
       transaction_details: {
@@ -100,18 +117,7 @@ export async function POST(request: Request) {
             name: item.product.title.substring(0, 50),
           }),
         ),
-        ...(shippingCost > 0
-          ? [
-              {
-                id: "SHIPPING",
-                price: shippingCost,
-                quantity: 1,
-                name: shippingRate?.courier_name
-                  ? `Ongkir - ${shippingRate.courier_name} ${shippingRate.courier_service_name}`
-                  : "Ongkos Kirim",
-              },
-            ]
-          : []),
+        ...shippingItem,
       ],
       callbacks: {
         finish: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/checkout/success`,
