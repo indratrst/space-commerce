@@ -276,19 +276,37 @@ export function CartDrawer() {
               <span>Rp {cartTotal.toLocaleString("id-ID")}</span>
             </div>
             <div className="space-y-3">
-              <Link
-                href="/cart"
-                onClick={() => setIsCartOpen(false)}
-                className="block w-full py-3 text-center border-2 font-bold uppercase tracking-wider transition-colors hover:opacity-70"
-                style={{
-                  borderColor: "var(--foreground)",
-                  color: "var(--foreground)",
-                }}
-              >
-                View Cart
-              </Link>
+              <div className="group relative h-12 bg-[#222] text-center rounded-[0.45em] font-arial transition-colors duration-300 hover:bg-[#222]">
+                {/* <div className="absolute w-[90px] h-[35px] bg-[#555] text-[0.9rem] text-white rounded-[0.25em] leading-[35px] bottom-[calc(35px+18px+10px)] left-[calc(50%-45px)] opacity-0 invisible group-hover:opacity-100 group-hover:visible group-hover:bottom-[calc(35px+18px)] transition-all duration-500 pointer-events-none">
+                  Price:-$20
+                </div>
+
+                <div className="absolute w-0 h-0 border-[10px] border-transparent border-t-[#555] left-[calc(50%-10px)] bottom-[calc(100%+18px-10px)] opacity-0 invisible group-hover:opacity-100 group-hover:visible group-hover:bottom-[calc(35px+18px-20px)] transition-all duration-500 pointer-events-none"></div> */}
+
+                {/* Button Content */}
+                <Link href="/cart">
+                  <button
+                    onClick={() => setIsCartOpen(false)}
+                    className="relative block w-full h-full overflow-hidden group border-2 font-bold uppercase tracking-wider transition-colors hover:opacity-70"
+                  >
+                    <div className="absolute w-full h-full left-0 top-0 text-white flex items-center justify-center transition-all duration-500 group-hover:top-[-100%]">
+                      View Cart
+                    </div>
+                    <div className="absolute w-full h-full left-0 top-[100%] text-white flex items-center justify-center transition-all duration-500 group-hover:top-0">
+                      <svg
+                        viewBox="0 0 16 16"
+                        className="bi bi-cart2 fill-current w-6 h-6"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path d="M0 2.5A.5.5 0 0 1 .5 2H2a.5.5 0 0 1 .485.379L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 3H.5a.5.5 0 0 1-.5-.5zM3.14 5l1.25 5h8.22l1.25-5H3.14zM5 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm9-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0z" />
+                      </svg>
+                    </div>
+                  </button>
+                </Link>
+              </div>
+
               <Link href="/checkout" onClick={() => setIsCartOpen(false)}>
-                <button className="w-full py-3 bg-black text-white font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors">
+                <button className="w-full py-3 bg-black text-white font-bold uppercase tracking-wider hover:bg-gray-900 transition-colors">
                   Checkout
                 </button>
               </Link>
