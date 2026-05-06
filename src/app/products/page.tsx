@@ -1,5 +1,9 @@
 import { getProducts, getCategories } from "@/lib/data";
-import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from "@tanstack/react-query";
 import { ProductListClient } from "@/components/products/ProductListClient";
 import { prisma } from "@/lib/prisma";
 
@@ -10,7 +14,9 @@ interface ProductsPageProps {
   }>;
 }
 
-export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+export default async function ProductsPage({
+  searchParams,
+}: ProductsPageProps) {
   const resolvedSearchParams = await searchParams;
   const { category: categorySlug, search } = resolvedSearchParams;
 
@@ -49,13 +55,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         ></div>
         {search && (
           <p className="mt-4 text-muted-foreground font-medium uppercase tracking-widest text-sm">
-            Showing results for "{search}"
+            Showing results for `&quot;`{search}`&quot;`
           </p>
         )}
       </div>
 
       <HydrationBoundary state={dehydrate(queryClient)}>
-        <ProductListClient initialCategory={categorySlug} initialSearch={search} />
+        <ProductListClient
+          initialCategory={categorySlug}
+          initialSearch={search}
+        />
       </HydrationBoundary>
     </div>
   );
