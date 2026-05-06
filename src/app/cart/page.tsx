@@ -306,7 +306,7 @@ export default function CartPage() {
 
             <Link href="/checkout">
               <button className="w-full bg-black text-white py-4 px-6 uppercase font-bold tracking-widest hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
-                Proceed to Checkout <ArrowRight className="h-5 w-5" />
+                Checkout <ArrowRight className="h-5 w-5" />
               </button>
             </Link>
             <p
