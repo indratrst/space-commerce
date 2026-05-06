@@ -3,15 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Product } from "@/types";
-import { useCart } from "@/contexts/CartContext";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { addToCart } = useCart();
-
   return (
     <div className="group flex flex-col justify-between">
       <div
@@ -37,15 +34,6 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
         </Link>
-
-        {/* <div className="absolute inset-x-0 bottom-0 p-4 opacity-0 transition-opacity group-hover:opacity-100 flex justify-center">
-          <button
-            onClick={() => addToCart(product)}
-            className="bg-black text-white px-6 py-2 w-full font-medium hover:bg-gray-800 transition-colors uppercase text-sm tracking-widest shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300"
-          >
-            Add To Cart
-          </button>
-        </div> */}
       </div>
 
       <div className="flex flex-col items-center text-center space-y-1">
