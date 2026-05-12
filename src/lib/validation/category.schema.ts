@@ -1,0 +1,36 @@
+import { z } from "zod";
+
+// Base schema (shared fields)
+const CategoryBaseSchema = {
+  name: z.string().min(1, "Name is required").max(100),
+  slug: z.string(),
+  description: z.string().optional().nullable(),
+};
+
+// CREATE schema
+export const CreateCategorySchema = z.object({
+  ...CategoryBaseSchema,
+});
+
+// UPDATE schema
+export const UpdateCategorySchema = z
+  .object({
+    id: z.union([z.string(), z.number()]),
+    ...CategoryBaseSchema,
+  })
+  .partial(); // Semua field optional except id
+
+// RESPONSE schema (from DB)
+export const CategoryResponseSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  slug: z.string(),
+  description: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+// Infer types
+export type CreateCategory = z.infer<typeof CreateCategorySchema>;
+export type UpdateCategory = z.infer<typeof UpdateCategorySchema>;
+export type CategoryResponse = z.infer<typeof CategoryResponseSchema>;

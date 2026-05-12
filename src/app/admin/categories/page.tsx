@@ -71,14 +71,18 @@ export default function CategoriesPage() {
       key: "description",
       label: "Description",
       render: (desc: string) => (
-        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-1 max-w-xs">{desc || "No description"}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-1 max-w-xs">
+          {desc || "No description"}
+        </p>
       ),
     },
     {
       key: "_count",
       label: "Products",
       render: (count: any) => (
-        <span className="font-bold text-slate-900 dark:text-white">{count?.products || 0} items</span>
+        <span className="font-bold text-slate-900 dark:text-white">
+          {count?.products || 0} items
+        </span>
       ),
     },
   ];
@@ -90,7 +94,9 @@ export default function CategoriesPage() {
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
             Categories
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Organize your products into logical groups.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
+            Organize your products into logical groups.
+          </p>
         </div>
         <Link
           href="/admin/categories/new"

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { CreateCategorySchema } from "@/lib/validation/category.schema";
 
 export async function GET() {
   try {
@@ -18,7 +19,7 @@ export async function GET() {
     console.error("Failed to fetch categories:", error);
     return NextResponse.json(
       { error: "Failed to fetch categories" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -26,18 +27,21 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== "SUPERUSER" && session.role !== "ADMIN")) {
+    if (
+      !session ||
+      (session.role !== "SUPERUSER" && session.role !== "ADMIN")
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { name, slug, description } = body;
+    const validatedData = CreateCategorySchema.parse(body);
 
     const category = await prisma.category.create({
       data: {
-        name,
-        slug,
-        description,
+        name: validatedData.name,
+        slug: validatedData.slug,
+        description: validatedData.description,
       },
     });
 
@@ -46,7 +50,7 @@ export async function POST(request: Request) {
     console.error("Failed to create category:", error);
     return NextResponse.json(
       { error: "Failed to create category" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { useRouter } from "next/navigation";
+import { CreateCategory } from "@/lib/validation/category.schema";
 
 export default function NewCategoryPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: CreateCategory) => {
     setLoading(true);
     try {
       const res = await fetch("/api/categories", {
