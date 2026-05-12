@@ -1,10 +1,42 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+import { z } from "zod";
 import { Loader2, Plus, ArrowLeft, Trash2, Box, Info } from "lucide-react";
 import Link from "next/link";
 import { ImageUpload } from "./ImageUpload";
 
+// ─── Zod Schema ──────────────────────────────────────────────
+const variantSchema = z.object({
+  id: z.string().optional(),
+  size: z.string().min(1, "Size wajib diisi"),
+  color: z.string().default(""),
+  stock: z.number().int().min(0, "Stock minimal 0"),
+  isDeleted: z.boolean().optional(),
+});
+
+const productSchema = z.object({
+  title: z.string().min(1, "Judul produk wajib diisi"),
+  price: z
+    .number({ message: "Harga wajib diisi" })
+    .int("Harga harus bilangan bulat")
+    .positive("Harga harus lebih dari 0"),
+  description: z.string().min(1, "Deskripsi wajib diisi"),
+  image: z.string().default(""),
+  categoryId: z.string().min(1, "Kategori wajib dipilih"),
+  variants: z
+    .array(variantSchema)
+    .refine(
+      (variants) => variants.filter((v) => !v.isDeleted).length > 0,
+      "Minimal 1 variant harus ada"
+    ),
+});
+
+type ProductFormValues = z.infer<typeof productSchema>;
+
+// ─── Props ───────────────────────────────────────────────────
 interface ProductFormProps {
   initialData?: any;
   onSubmit: (data: any) => Promise<void>;
@@ -17,30 +49,52 @@ export function ProductForm({
   isLoading,
 }: ProductFormProps) {
   const [categories, setCategories] = useState<any[]>([]);
-  const [formData, setFormData] = useState({
-    title: initialData?.title || "",
-    price: initialData?.price || "",
-    description: initialData?.description || "",
-    image: initialData?.image || "",
-    categoryId: initialData?.categoryId || "",
-    variants: initialData?.variants
-      ?.filter((v: any) => v.isActive) // 🔥 FILTER DI SINI
-      .map((v: any) => ({
-        id: v.id,
-        size: v.size,
-        stock: v.stock,
-        color: v.color || "",
-      })) || [{ size: "One Size", stock: 0, color: "" }],
+
+  // ── React Hook Form ──────────────────────────────────────
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<ProductFormValues>({
+    resolver: standardSchemaResolver(productSchema) as any,
+    defaultValues: {
+      title: initialData?.title || "",
+      price: initialData?.price || "",
+      description: initialData?.description || "",
+      image: initialData?.image || "",
+      categoryId: initialData?.categoryId || "",
+      variants:
+        initialData?.variants
+          ?.filter((v: any) => v.isActive)
+          .map((v: any) => ({
+            id: v.id,
+            size: v.size,
+            stock: v.stock,
+            color: v.color || "",
+          })) || [{ size: "One Size", stock: 0, color: "" }],
+    },
   });
 
+  const { fields, append, remove, update } = useFieldArray({
+    control,
+    name: "variants",
+  });
+
+  const watchedImage = watch("image");
+  const watchedVariants = watch("variants");
+
+  // ── Fetch Categories ─────────────────────────────────────
   useEffect(() => {
     async function fetchCategories() {
       try {
         const res = await fetch("/api/categories");
         const data = await res.json();
         setCategories(data);
-        if (!formData.categoryId && data.length > 0) {
-          setFormData((prev) => ({ ...prev, categoryId: data[0].id }));
+        if (!initialData?.categoryId && data.length > 0) {
+          setValue("categoryId", data[0].id);
         }
       } catch (error) {
         console.error("Failed to fetch categories:", error);
@@ -49,46 +103,35 @@ export function ProductForm({
     fetchCategories();
   }, []);
 
+  // ── Variant Helpers ──────────────────────────────────────
   const addVariant = () => {
-    setFormData((prev) => ({
-      ...prev,
-      variants: [...prev.variants, { size: "", stock: 0, color: "" }],
-    }));
+    append({ size: "", stock: 0, color: "" });
   };
 
   const removeVariant = (index: number) => {
-    setFormData((prev) => {
-      const newVariants = [...prev.variants];
-
-      if (newVariants[index].id) {
-        // variant lama → tandai delete
-        newVariants[index] = {
-          ...newVariants[index],
-          isDeleted: true,
-        };
-      } else {
-        // variant baru → boleh langsung remove
-        newVariants.splice(index, 1);
-      }
-
-      return {
-        ...prev,
-        variants: newVariants,
-      };
-    });
+    const current = watchedVariants[index];
+    if (current?.id) {
+      // Variant lama (ada di DB) → soft delete
+      setValue(`variants.${index}.isDeleted`, true);
+    } else {
+      // Variant baru → hard remove
+      remove(index);
+    }
   };
 
-  const updateVariant = (index: number, field: string, value: any) => {
-    const newVariants = [...formData.variants];
-    newVariants[index] = { ...newVariants[index], [field]: value };
-    setFormData({ ...formData, variants: newVariants });
+  // Count visible (non-deleted) variants
+  const visibleCount = watchedVariants.filter((v) => !v.isDeleted).length;
+
+  // ── Submit Handler ───────────────────────────────────────
+  const onFormSubmit = (data: ProductFormValues) => {
+    onSubmit(data);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSubmit(formData);
+  const onFormError = (errors: any) => {
+    console.log("❌ Validation errors:", errors);
   };
 
+  // ── Render ───────────────────────────────────────────────
   return (
     <div className="max-w-5xl mx-auto pb-20">
       <div className="flex items-center gap-4 mb-8">
@@ -104,10 +147,10 @@ export function ProductForm({
       </div>
 
       <form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onFormSubmit, onFormError)}
         className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
-        {/* Main Info */}
+        {/* ═══ Main Info ═══ */}
         <div className="lg:col-span-2 space-y-8">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
             <h3 className="text-lg font-bold flex items-center gap-2 text-indigo-600">
@@ -115,36 +158,44 @@ export function ProductForm({
               General Information
             </h3>
 
+            {/* Title */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-tight">
                 Product Title
               </label>
               <input
-                required
+                {...register("title")}
                 placeholder="e.g. Classic Logo T-Shirt"
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all"
-                value={formData.title ?? ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
+                className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all ${errors.title
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-slate-200 dark:border-slate-700"
+                  }`}
               />
+              {errors.title && (
+                <p className="text-xs text-red-500">{errors.title.message}</p>
+              )}
             </div>
 
+            {/* Price + Category */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-tight">
                   Price (IDR)
                 </label>
                 <input
-                  required
+                  {...register("price", { valueAsNumber: true })}
                   type="number"
                   placeholder="0"
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all"
-                  value={formData.price ?? ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
+                  className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all ${errors.price
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-slate-200 dark:border-slate-700"
+                    }`}
                 />
+                {errors.price && (
+                  <p className="text-xs text-red-500">
+                    {errors.price.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -152,12 +203,11 @@ export function ProductForm({
                   Category
                 </label>
                 <select
-                  required
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all appearance-none"
-                  value={formData.categoryId ?? ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, categoryId: e.target.value })
-                  }
+                  {...register("categoryId")}
+                  className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all appearance-none ${errors.categoryId
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-slate-200 dark:border-slate-700"
+                    }`}
                 >
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
@@ -165,27 +215,37 @@ export function ProductForm({
                     </option>
                   ))}
                 </select>
+                {errors.categoryId && (
+                  <p className="text-xs text-red-500">
+                    {errors.categoryId.message}
+                  </p>
+                )}
               </div>
             </div>
 
+            {/* Description */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-tight">
                 Description
               </label>
               <textarea
-                required
+                {...register("description")}
                 rows={6}
                 placeholder="Product details and specifications..."
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all resize-none"
-                value={formData.description ?? ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all resize-none ${errors.description
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-slate-200 dark:border-slate-700"
+                  }`}
               />
+              {errors.description && (
+                <p className="text-xs text-red-500">
+                  {errors.description.message}
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Variants */}
+          {/* ═══ Variants ═══ */}
           <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold flex items-center gap-2 text-indigo-600">
@@ -202,56 +262,82 @@ export function ProductForm({
               </button>
             </div>
 
+            {/* Variant-level error (e.g. "minimal 1 variant") */}
+            {errors.variants?.root && (
+              <p className="text-xs text-red-500">
+                {errors.variants.root.message}
+              </p>
+            )}
+
             <div className="space-y-4">
-              {formData.variants
-                .filter((v: any) => !v.isDeleted)
-                .map((v: any, index: number) => (
+              {fields.map((field, index) => {
+                // Skip soft-deleted variants
+                if (watchedVariants[index]?.isDeleted) return null;
+
+                return (
                   <div
-                    key={v.id || index}
+                    key={field.id}
                     className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 rounded-xl border border-slate-100 dark:border-slate-800 relative group"
                   >
+                    {/* Hidden field for DB id */}
+                    <input type="hidden" {...register(`variants.${index}.id`)} />
+
+                    {/* Size */}
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         Size
                       </label>
                       <input
+                        {...register(`variants.${index}.size`)}
                         placeholder="e.g. M"
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
-                        value={v.size ?? ""}
-                        onChange={(e) =>
-                          updateVariant(index, "size", e.target.value)
-                        }
+                        className={`w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-xs dark:text-white ${errors.variants?.[index]?.size
+                          ? "border-red-500"
+                          : "border-slate-200 dark:border-slate-700"
+                          }`}
                       />
+                      {errors.variants?.[index]?.size && (
+                        <p className="text-[10px] text-red-500">
+                          {errors.variants[index].size.message}
+                        </p>
+                      )}
                     </div>
+
+                    {/* Color */}
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         Color
                       </label>
                       <input
+                        {...register(`variants.${index}.color`)}
                         placeholder="Optional"
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
-                        value={v.color ?? ""}
-                        onChange={(e) =>
-                          updateVariant(index, "color", e.target.value)
-                        }
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs dark:text-white"
                       />
                     </div>
+
+                    {/* Stock */}
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         Stock
                       </label>
                       <input
+                        {...register(`variants.${index}.stock`, { valueAsNumber: true })}
                         type="number"
                         placeholder="0"
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
-                        value={v.stock ?? 0}
-                        onChange={(e) =>
-                          updateVariant(index, "stock", e.target.value)
-                        }
+                        className={`w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-xs dark:text-white ${errors.variants?.[index]?.stock
+                          ? "border-red-500"
+                          : "border-slate-200 dark:border-slate-700"
+                          }`}
                       />
+                      {errors.variants?.[index]?.stock && (
+                        <p className="text-[10px] text-red-500">
+                          {errors.variants[index].stock.message}
+                        </p>
+                      )}
                     </div>
+
+                    {/* Delete button */}
                     <div className="flex items-end justify-end">
-                      {formData.variants.length > 1 && (
+                      {visibleCount > 1 && (
                         <button
                           type="button"
                           onClick={() => removeVariant(index)}
@@ -262,17 +348,18 @@ export function ProductForm({
                       )}
                     </div>
                   </div>
-                ))}
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Sidebar / Media */}
+        {/* ═══ Sidebar / Media ═══ */}
         <div className="space-y-8">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
             <ImageUpload
-              value={formData.image ?? ""}
-              onChange={(url) => setFormData({ ...formData, image: url })}
+              value={watchedImage ?? ""}
+              onChange={(url) => setValue("image", url)}
             />
           </div>
 
