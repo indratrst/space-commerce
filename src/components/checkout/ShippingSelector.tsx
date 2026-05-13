@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { BillingAddress, ShippingRate } from "@/types/checkout";
 import { CartItem } from "@/types";
 import { Truck, Loader2, ChevronDown, RefreshCw } from "lucide-react";
-import { calculateRates, findMatch } from "@/services/rajaongkir";
+import {
+  calculateRates,
+  transformToShippingRate,
+} from "@/services/rajaongkir/client";
+import { STORE_CONFIG } from "@/services/rajaongkir/constants";
 
-// Origin district ID (Bandung city area) — adjust to your store location
-const ORIGIN_DISTRICT_ID = "3273010"; // Bandung Wetan as default
+// adjust to your store location
+const ORIGIN_DISTRICT_ID = "5256";
 
 const COURIERS = [
   { code: "jne", label: "JNE" },
@@ -23,7 +27,11 @@ interface ShippingSelectorProps {
   onSelect: (rate: ShippingRate) => void;
 }
 
-export function ShippingSelector({ billingData, items, onSelect }: ShippingSelectorProps) {
+export function ShippingSelector({
+  billingData,
+  items,
+  onSelect,
+}: ShippingSelectorProps) {
   const [rates, setRates] = useState<ShippingRate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,51 +45,82 @@ export function ShippingSelector({ billingData, items, onSelect }: ShippingSelec
 
   const canCalculate = !!billingData.areaId;
 
-  const fetchRates = async () => {
+  const fetchRates = useCallback(async () => {
     if (!canCalculate) return;
     setLoading(true);
     setError(null);
     setRates([]);
     setSelectedIndex(null);
 
+    //PRODUCTION API LIVE
+    // try {
+    //   const data = await calculateRates(
+    //     ORIGIN_DISTRICT_ID,
+    //     billingData.areaId!,
+    //     totalWeight,
+    //     selectedCourier,
+    //   );
+
+    //   if (!data || data.length === 0) {
+    //     setError("Tidak ada layanan pengiriman tersedia ke area ini.");
+    //     return;
+    //   }
+
+    //   const mapped: ShippingRate[] = data.map((item: any) => ({
+    //     courier_name: item.courier_name || selectedCourier.toUpperCase(),
+    //     courier_code: item.courier_code || selectedCourier,
+    //     courier_service_name: item.courier_service_name || item.service || "",
+    //     courier_service_code: item.courier_service_code || item.service || "",
+    //     price: item.price || 0,
+    //     duration: item.duration || item.etd || "—",
+    //   }));
+
+    //   setRates(mapped);
+    // } catch (e: any) {
+    //   setError(e.message || "Gagal memuat ongkir.");
+    // } finally {
+    //   setLoading(false);
+    // }
+
+    // MOCK MODE
     try {
-      const data = await calculateRates(
-        ORIGIN_DISTRICT_ID,
-        billingData.areaId!,
-        totalWeight,
-        selectedCourier,
-        true // district-level
-      );
+      console.log("🔍 Fetching rates with:", {
+        originId: STORE_CONFIG.originDistrictId,
+        destinationId: billingData.areaId,
+        weight: totalWeight,
+        courier: selectedCourier,
+      });
+
+      const data = await calculateRates({
+        originId: STORE_CONFIG.originDistrictId,
+        destinationId: billingData.areaId!,
+        weight: totalWeight,
+        courier: selectedCourier,
+      });
+
+      console.log("📦 Rates response:", data);
 
       if (!data || data.length === 0) {
         setError("Tidak ada layanan pengiriman tersedia ke area ini.");
         return;
       }
 
-      const mapped: ShippingRate[] = data.map((item: any) => ({
-        courier_name: item.courier_name || selectedCourier.toUpperCase(),
-        courier_code: item.courier_code || selectedCourier,
-        courier_service_name: item.courier_service_name || item.service || "",
-        courier_service_code: item.courier_service_code || item.service || "",
-        price: item.price || 0,
-        duration: item.duration || item.etd || "—",
-      }));
-
+      const mapped: ShippingRate[] = data.map(transformToShippingRate);
       setRates(mapped);
     } catch (e: any) {
+      console.error("Fetch rates error:", e);
       setError(e.message || "Gagal memuat ongkir.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [billingData.areaId, totalWeight, selectedCourier]); // ✅ Dependency array lengkap
 
   // Auto fetch when areaId or courier changes
   useEffect(() => {
     if (canCalculate) {
       fetchRates();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [billingData.areaId, selectedCourier]);
+  }, [canCalculate, fetchRates]);
 
   const handleSelect = (rate: ShippingRate, idx: number) => {
     setSelectedIndex(idx);
@@ -98,7 +137,10 @@ export function ShippingSelector({ billingData, items, onSelect }: ShippingSelec
       <div className="relative">
         <select
           className="w-full p-3 text-sm border-none appearance-none cursor-pointer focus:ring-1 focus:ring-foreground"
-          style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}
+          style={{
+            backgroundColor: "var(--surface)",
+            color: "var(--foreground)",
+          }}
           value={selectedCourier}
           onChange={(e) => setSelectedCourier(e.target.value)}
           disabled={loading}
@@ -107,7 +149,10 @@ export function ShippingSelector({ billingData, items, onSelect }: ShippingSelec
             <option
               key={c.code}
               value={c.code}
-              style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}
+              style={{
+                backgroundColor: "var(--surface)",
+                color: "var(--foreground)",
+              }}
             >
               {c.label}
             </option>
@@ -149,7 +194,7 @@ export function ShippingSelector({ billingData, items, onSelect }: ShippingSelec
 
       {/* Rate list */}
       {!loading && rates.length > 0 && (
-        <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
+        <div className="space-y-2 max-h-65 overflow-y-auto pr-1 custom-scrollbar">
           {rates.map((rate, idx) => {
             const isSelected = selectedIndex === idx;
             return (
@@ -164,7 +209,9 @@ export function ShippingSelector({ billingData, items, onSelect }: ShippingSelec
               >
                 <Truck
                   className={`h-4 w-4 shrink-0 ${
-                    isSelected ? "text-white dark:text-black" : "text-muted-foreground"
+                    isSelected
+                      ? "text-white dark:text-black"
+                      : "text-muted-foreground"
                   }`}
                 />
                 <div className="flex-1 min-w-0">
@@ -173,7 +220,9 @@ export function ShippingSelector({ billingData, items, onSelect }: ShippingSelec
                   </p>
                   <p
                     className={`text-[10px] mt-0.5 ${
-                      isSelected ? "text-gray-300 dark:text-gray-600" : "text-muted-foreground"
+                      isSelected
+                        ? "text-gray-300 dark:text-gray-600"
+                        : "text-muted-foreground"
                     }`}
                   >
                     Estimasi: {rate.duration}

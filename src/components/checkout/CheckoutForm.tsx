@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { BillingAddress } from "@/types/checkout";
-import { MapPin, Phone, Mail, User, ChevronDown } from "lucide-react";
-import { getProvinces, getRegencies, getDistricts } from "@/services/wilayah";
+import { MapPin, Phone, Mail, User, X } from "lucide-react";
+import { searchLocations } from "@/services/rajaongkir/client";
+import { LocationResult } from "@/types/rajaongkir";
 
 interface CheckoutFormProps {
   deliveryMethod: "shipping" | "pickup";
@@ -12,147 +13,156 @@ interface CheckoutFormProps {
 
 export function CheckoutForm({ deliveryMethod, onChange }: CheckoutFormProps) {
   const [formData, setFormData] = useState<Partial<BillingAddress>>({});
-  
-  const [provinces, setProvinces] = useState<any[]>([]);
-  const [regencies, setRegencies] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
 
-  const [selectedProvince, setSelectedProvince] = useState("");
-  const [selectedRegency, setSelectedRegency] = useState("");
-  const [selectedDistrict, setSelectedDistrict] = useState("");
+  // State untuk autocomplete
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<LocationResult[]>([]);
+  const [selectedLocation, setSelectedLocation] =
+    useState<LocationResult | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [loading, setLoading] = useState({
-    provinces: false,
-    regencies: false,
-    districts: false
-  });
-
-  // Load Provinces on mount
+  // Close dropdown when clicking outside
   useEffect(() => {
-    async function loadProvinces() {
-      setLoading(prev => ({ ...prev, provinces: true }));
-      try {
-        const res = await getProvinces();
-        setProvinces(res.data || []);
-      } catch (e) {
-        console.error(e);
-        setProvinces([]);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
       }
-      setLoading(prev => ({ ...prev, provinces: false }));
-    }
-    loadProvinces();
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Load Regencies when province changes
-  useEffect(() => {
-    if (!selectedProvince) {
-      setRegencies([]);
+  // Search locations with debounce
+  const performSearch = useCallback(async (keyword: string) => {
+    if (keyword.length < 2) {
+      setSearchResults([]);
+      setShowDropdown(false);
       return;
     }
-    async function loadRegencies() {
-      setLoading(prev => ({ ...prev, regencies: true }));
-      try {
-        const res = await getRegencies(selectedProvince);
-        setRegencies(res.data || []);
-      } catch (e) {
-        console.error(e);
-        setRegencies([]);
-      }
-      setLoading(prev => ({ ...prev, regencies: false }));
-    }
-    loadRegencies();
-  }, [selectedProvince]);
 
-  // Load Districts when regency changes
+    setIsSearching(true);
+    const results = await searchLocations(keyword);
+    setSearchResults(results);
+    setShowDropdown(results.length > 0);
+    setIsSearching(false);
+  }, []);
+
+  // Debounced search
   useEffect(() => {
-    if (!selectedRegency) {
-      setDistricts([]);
-      return;
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
     }
-    async function loadDistricts() {
-      setLoading(prev => ({ ...prev, districts: true }));
-      try {
-        const res = await getDistricts(selectedRegency);
-        setDistricts(res.data || []);
-      } catch (e) {
-        console.error(e);
-        setDistricts([]);
-      }
-      setLoading(prev => ({ ...prev, districts: false }));
-    }
-    loadDistricts();
-  }, [selectedRegency]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    debounceRef.current = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [searchQuery, performSearch]);
+
+  const handleLocationSelect = (location: LocationResult) => {
+    setSelectedLocation(location);
+    setSearchQuery(location.label);
+    setShowDropdown(false);
+
+    // Format area name based on available data
+    let areaName = location.label;
+    let provinceName = location.province_name;
+    let cityName = location.city_name;
+    let districtName = location.district_name || undefined;
+
+    const newData: Partial<BillingAddress> = {
+      ...formData,
+      areaId: location.id,
+      areaName,
+      province_name: provinceName,
+      city_name: cityName,
+      district_name: districtName,
+      zip_code: location.zip_code,
+    };
+
+    setFormData(newData);
+    onChange(newData);
+  };
+
+  const handleClearLocation = () => {
+    setSelectedLocation(null);
+    setSearchQuery("");
+    setSearchResults([]);
+
+    const newData: Partial<BillingAddress> = {
+      ...formData,
+      areaId: undefined,
+      areaName: undefined,
+      province_name: undefined,
+      city_name: undefined,
+      district_name: undefined,
+      zip_code: undefined,
+    };
+
+    setFormData(newData);
+    onChange(newData);
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
     const newData = { ...formData, [name]: value };
     setFormData(newData);
     onChange(newData);
   };
 
-  const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const code = e.target.value;
-    const province = provinces.find(p => p.code === code);
-    setSelectedProvince(code);
-    setSelectedRegency("");
-    setSelectedDistrict("");
-    
-    onChange({ 
-      ...formData, 
-      areaName: province?.name || "",
-      province_name: province?.name || ""
-    });
-  };
-
-  const handleRegencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const code = e.target.value;
-    const regency = regencies.find(r => r.code === code);
-    setSelectedRegency(code);
-    setSelectedDistrict("");
-    
-    const province = provinces.find(p => p.code === selectedProvince);
-    const areaName = `${regency?.name}, ${province?.name}`;
-    
-    const newData: Partial<BillingAddress> = { 
-      ...formData, 
-      areaName,
-      province_name: province?.name || "",
-      city_name: regency?.name 
-    };
-    setFormData(newData);
-    onChange(newData);
-  };
-
-  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const code = e.target.value;
-    const district = districts.find(d => d.code === code);
-    setSelectedDistrict(code);
-    
-    const regency = regencies.find(r => r.code === selectedRegency);
-    const province = provinces.find(p => p.code === selectedProvince);
-    const areaName = `${district?.name}, ${regency?.name}, ${province?.name}`;
-    
-    const newData: Partial<BillingAddress> = { 
-      ...formData, 
-      areaId: code,
-      areaName,
-      province_name: province?.name || "",
-      city_name: regency?.name,
-      district_name: district?.name
-    };
-    setFormData(newData);
-    onChange(newData);
+  // Get location type badge
+  const getLocationBadge = (type: LocationResult["type"]) => {
+    switch (type) {
+      case "province":
+        return (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+            Province
+          </span>
+        );
+      case "city":
+        return (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">
+            City
+          </span>
+        );
+      case "district":
+        return (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">
+            District
+          </span>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold uppercase tracking-wider border-b pb-2" style={{ borderColor: "var(--surface-border)" }}>
+      <h2
+        className="text-xl font-bold uppercase tracking-wider border-b pb-2"
+        style={{ borderColor: "var(--surface-border)" }}
+      >
         Billing Details
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-muted-foreground block">First Name *</label>
+          <label className="text-xs font-bold uppercase text-muted-foreground block">
+            First Name *
+          </label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
             <input
@@ -160,14 +170,19 @@ export function CheckoutForm({ deliveryMethod, onChange }: CheckoutFormProps) {
               name="firstName"
               required
               className="w-full bg-surface border-none p-3 pl-10 text-sm focus:ring-1 focus:ring-foreground"
-              style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}
+              style={{
+                backgroundColor: "var(--surface)",
+                color: "var(--foreground)",
+              }}
               placeholder="First Name"
               onChange={handleInputChange}
             />
           </div>
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-muted-foreground block">Last Name *</label>
+          <label className="text-xs font-bold uppercase text-muted-foreground block">
+            Last Name *
+          </label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
             <input
@@ -175,7 +190,10 @@ export function CheckoutForm({ deliveryMethod, onChange }: CheckoutFormProps) {
               name="lastName"
               required
               className="w-full bg-surface border-none p-3 pl-10 text-sm focus:ring-1 focus:ring-foreground"
-              style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}
+              style={{
+                backgroundColor: "var(--surface)",
+                color: "var(--foreground)",
+              }}
               placeholder="Last Name"
               onChange={handleInputChange}
             />
@@ -185,7 +203,9 @@ export function CheckoutForm({ deliveryMethod, onChange }: CheckoutFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-muted-foreground block">Email Address *</label>
+          <label className="text-xs font-bold uppercase text-muted-foreground block">
+            Email Address *
+          </label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
             <input
@@ -193,14 +213,19 @@ export function CheckoutForm({ deliveryMethod, onChange }: CheckoutFormProps) {
               name="email"
               required
               className="w-full bg-surface border-none p-3 pl-10 text-sm focus:ring-1 focus:ring-foreground"
-              style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}
+              style={{
+                backgroundColor: "var(--surface)",
+                color: "var(--foreground)",
+              }}
               placeholder="Email"
               onChange={handleInputChange}
             />
           </div>
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-muted-foreground block">Phone *</label>
+          <label className="text-xs font-bold uppercase text-muted-foreground block">
+            Phone *
+          </label>
           <div className="relative">
             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
             <input
@@ -208,7 +233,10 @@ export function CheckoutForm({ deliveryMethod, onChange }: CheckoutFormProps) {
               name="phone"
               required
               className="w-full bg-surface border-none p-3 pl-10 text-sm focus:ring-1 focus:ring-foreground"
-              style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}
+              style={{
+                backgroundColor: "var(--surface)",
+                color: "var(--foreground)",
+              }}
               placeholder="Phone Number"
               onChange={handleInputChange}
             />
@@ -218,75 +246,137 @@ export function CheckoutForm({ deliveryMethod, onChange }: CheckoutFormProps) {
 
       {deliveryMethod === "shipping" && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Province */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-muted-foreground block">Province *</label>
-              <div className="relative">
-                <select
-                  className="w-full bg-surface border-none p-3 text-sm focus:ring-1 focus:ring-foreground appearance-none cursor-pointer"
-                  style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}
-                  onChange={handleProvinceChange}
-                  value={selectedProvince}
+          {/* Location Search - Autocomplete */}
+          <div className="space-y-2" ref={searchRef}>
+            <label className="text-xs font-bold uppercase text-muted-foreground block">
+              City / District *
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40 z-10" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() =>
+                  searchQuery.length >= 2 &&
+                  searchResults.length > 0 &&
+                  setShowDropdown(true)
+                }
+                className="w-full bg-surface border-none p-3 pl-10 pr-10 text-sm focus:ring-1 focus:ring-foreground"
+                style={{
+                  backgroundColor: "var(--surface)",
+                  color: "var(--foreground)",
+                }}
+                placeholder="Search for city or district (min 2 characters)..."
+              />
+              {searchQuery && selectedLocation && (
+                <button
+                  onClick={handleClearLocation}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
                 >
-                  <option value="" style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}>Select Province</option>
-                  {Array.isArray(provinces) && provinces.map(p => (
-                    <option key={p.code} value={p.code} style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}>{p.name}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40 pointer-events-none" />
-              </div>
+                  <X className="h-4 w-4 opacity-40 hover:opacity-100" />
+                </button>
+              )}
+              {isSearching && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="animate-spin h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full" />
+                </div>
+              )}
             </div>
 
-            {/* Regency */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-muted-foreground block">City / Regency *</label>
-              <div className="relative">
-                <select
-                  className="w-full bg-surface border-none p-3 text-sm focus:ring-1 focus:ring-foreground appearance-none cursor-pointer"
-                  style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}
-                  disabled={!selectedProvince || loading.regencies}
-                  onChange={handleRegencyChange}
-                  value={selectedRegency}
-                >
-                  <option value="" style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}>Select City</option>
-                  {Array.isArray(regencies) && regencies.map(r => (
-                    <option key={r.code} value={r.code} style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}>{r.name}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40 pointer-events-none" />
+            {/* Dropdown Results */}
+            {showDropdown && searchResults.length > 0 && (
+              <div
+                className="z-50 w-full max-h-64 overflow-y-auto rounded-md shadow-lg border mt-1"
+                style={{
+                  backgroundColor: "var(--surface)",
+                  borderColor: "var(--surface-border)",
+                }}
+              >
+                {searchResults.map((result) => (
+                  <button
+                    key={result.id}
+                    onClick={() => handleLocationSelect(result)}
+                    className="w-full  text-left p-3 hover:bg-surface-hover transition-colors border-b last:border-b-0"
+                    style={{
+                      borderBottomColor: "var(--surface-border)",
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{result.label}</p>
+                        <p className="text-xs opacity-60 mt-1">
+                          {result.province_name}
+                          {result.city_name && ` › ${result.city_name}`}
+                          {result.district_name && ` › ${result.district_name}`}
+                          {result.zip_code && ` (${result.zip_code})`}
+                        </p>
+                      </div>
+                      <div className="shrink-0">
+                        {getLocationBadge(result.type)}
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
-            </div>
+            )}
 
-            {/* District */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-muted-foreground block">District *</label>
-              <div className="relative">
-                <select
-                  className="w-full bg-surface border-none p-3 text-sm focus:ring-1 focus:ring-foreground appearance-none cursor-pointer"
-                  style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}
-                  disabled={!selectedRegency || loading.districts}
-                  onChange={handleDistrictChange}
-                  value={selectedDistrict}
+            {/* No Results */}
+            {showDropdown &&
+              searchQuery.length >= 2 &&
+              !isSearching &&
+              searchResults.length === 0 && (
+                <div
+                  className="absolute z-50 w-full rounded-md shadow-lg border p-4 text-center"
+                  style={{
+                    backgroundColor: "var(--surface)",
+                    borderColor: "var(--surface-border)",
+                  }}
                 >
-                  <option value="" style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}>Select District</option>
-                  {Array.isArray(districts) && districts.map(d => (
-                    <option key={d.code} value={d.code} style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}>{d.name}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40 pointer-events-none" />
-              </div>
-            </div>
+                  <p className="text-sm opacity-60">
+                    No locations found. Try another keyword.
+                  </p>
+                </div>
+              )}
+
+            {/* Helper text */}
+            <p className="text-xs opacity-50 mt-1">
+              Type at least 2 characters to search for your city or district
+            </p>
           </div>
 
+          {/* Selected Location Summary */}
+          {selectedLocation && (
+            <div
+              className="p-3 rounded-md"
+              style={{
+                backgroundColor: "var(--surface-hover)",
+                border: "1px solid var(--surface-border)",
+              }}
+            >
+              <p className="text-xs font-bold uppercase mb-1">
+                Selected Location
+              </p>
+              <p className="text-sm">{selectedLocation.label}</p>
+              <p className="text-xs opacity-60 mt-1">
+                Zip Code: {selectedLocation.zip_code || "N/A"}
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-muted-foreground block">Street Address *</label>
+            <label className="text-xs font-bold uppercase text-muted-foreground block">
+              Street Address *
+            </label>
             <textarea
               name="address"
               required
               rows={3}
               className="w-full bg-surface border-none p-3 text-sm focus:ring-1 focus:ring-foreground"
-              style={{ backgroundColor: "var(--surface)", color: "var(--foreground)" }}
+              style={{
+                backgroundColor: "var(--surface)",
+                color: "var(--foreground)",
+              }}
               placeholder="House number and street name"
               onChange={handleInputChange}
             />

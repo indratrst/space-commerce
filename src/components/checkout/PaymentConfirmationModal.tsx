@@ -27,7 +27,7 @@ export function PaymentConfirmationModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div
         className="bg-surface w-full max-w-lg rounded-xl overflow-hidden shadow-2xl relative border"
         style={{ borderColor: "var(--surface-border)" }}
