@@ -15,7 +15,7 @@ export const CreateCategorySchema = z.object({
 // UPDATE schema
 export const UpdateCategorySchema = z
   .object({
-    id: z.union([z.string(), z.number()]),
+    id: z.union([z.string()]),
     ...CategoryBaseSchema,
   })
   .partial(); // Semua field optional except id
