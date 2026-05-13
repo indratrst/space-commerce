@@ -1,55 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { z } from "zod";
 import { Loader2, Plus, ArrowLeft, Trash2, Box, Info } from "lucide-react";
 import Link from "next/link";
 import { ImageUpload } from "./ImageUpload";
-
-// ─── Zod Schema ──────────────────────────────────────────────
-const variantSchema = z.object({
-  id: z.string().optional(),
-  size: z.string().min(1, "Size wajib diisi"),
-  color: z.string().default(""),
-  stock: z.number().int().min(0, "Stock minimal 0"),
-  isDeleted: z.boolean().optional(),
-});
-
-const productSchema = z.object({
-  title: z.string().min(1, "Judul produk wajib diisi"),
-  price: z
-    .number({ message: "Harga wajib diisi" })
-    .int("Harga harus bilangan bulat")
-    .positive("Harga harus lebih dari 0"),
-  description: z.string().min(1, "Deskripsi wajib diisi"),
-  image: z.string().default(""),
-  categoryId: z.string().min(1, "Kategori wajib dipilih"),
-  variants: z
-    .array(variantSchema)
-    .refine(
-      (variants) => variants.filter((v) => !v.isDeleted).length > 0,
-      "Minimal 1 variant harus ada"
-    ),
-});
-
-type ProductFormValues = z.infer<typeof productSchema>;
+import { ProductBaseSchema } from "@/types";
+import { CategoryResponse } from "@/lib/validation/category.schema";
 
 // ─── Props ───────────────────────────────────────────────────
 interface ProductFormProps {
   initialData?: any;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: ProductBaseSchema) => Promise<void>;
   isLoading?: boolean;
+  categories?: CategoryResponse[];
 }
 
 export function ProductForm({
   initialData,
   onSubmit,
   isLoading,
+  categories,
 }: ProductFormProps) {
-  const [categories, setCategories] = useState<any[]>([]);
-
   // ── React Hook Form ──────────────────────────────────────
   const {
     register,
@@ -58,23 +30,22 @@ export function ProductForm({
     setValue,
     watch,
     formState: { errors },
-  } = useForm<ProductFormValues>({
-    resolver: standardSchemaResolver(productSchema) as any,
+  } = useForm<ProductBaseSchema>({
+    resolver: standardSchemaResolver(ProductBaseSchema) as any,
     defaultValues: {
       title: initialData?.title || "",
-      price: initialData?.price || "",
+      price: initialData?.price || 0,
       description: initialData?.description || "",
       image: initialData?.image || "",
-      categoryId: initialData?.categoryId || "",
-      variants:
-        initialData?.variants
-          ?.filter((v: any) => v.isActive)
-          .map((v: any) => ({
-            id: v.id,
-            size: v.size,
-            stock: v.stock,
-            color: v.color || "",
-          })) || [{ size: "One Size", stock: 0, color: "" }],
+      categoryId: String(initialData?.categoryId || ""),
+      variants: initialData?.variants
+        ?.filter((v: any) => v.isActive)
+        .map((v: any) => ({
+          id: v.id,
+          size: v.size,
+          stock: v.stock,
+          color: v.color || "",
+        })) || [{ size: "One Size", stock: 0, color: "" }],
     },
   });
 
@@ -85,23 +56,9 @@ export function ProductForm({
 
   const watchedImage = watch("image");
   const watchedVariants = watch("variants");
+  const watchedCategoryId = watch("categoryId");
 
   // ── Fetch Categories ─────────────────────────────────────
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const res = await fetch("/api/categories");
-        const data = await res.json();
-        setCategories(data);
-        if (!initialData?.categoryId && data.length > 0) {
-          setValue("categoryId", data[0].id);
-        }
-      } catch (error) {
-        console.error("Failed to fetch categories:", error);
-      }
-    }
-    fetchCategories();
-  }, []);
 
   // ── Variant Helpers ──────────────────────────────────────
   const addVariant = () => {
@@ -123,7 +80,7 @@ export function ProductForm({
   const visibleCount = watchedVariants.filter((v) => !v.isDeleted).length;
 
   // ── Submit Handler ───────────────────────────────────────
-  const onFormSubmit = (data: ProductFormValues) => {
+  const onFormSubmit = (data: ProductBaseSchema) => {
     onSubmit(data);
   };
 
@@ -131,6 +88,49 @@ export function ProductForm({
     console.log("❌ Validation errors:", errors);
   };
 
+  // useEffect(() => {
+  //   if (initialData) {
+  //     reset({
+  //       title: initialData.title || "",
+  //       price: initialData.price || 0,
+  //       description: initialData.description || "",
+  //       image: initialData.image || "",
+  //       categoryId: initialData.categoryId || "",
+  //       variants:
+  //         initialData.variants
+  //           ?.filter((v: any) => v.isActive)
+  //           .map((v: any) => ({
+  //             id: v.id,
+  //             size: v.size,
+  //             stock: v.stock,
+  //             color: v.color || "",
+  //           })) || [],
+  //     });
+  //   }
+  // }, [initialData, reset]);
+
+  // console.log("initial category:", initialData?.categoryId);
+  // console.log(
+  //   "categories ids:",
+  //   categories.map((c) => c.id),
+  // );
+
+  // useEffect(() => {
+  //   async function fetchCategories() {
+  //     try {
+  //       const res = await fetch("/api/categories");
+  //       const data = await res.json();
+  //       setCategories(data);
+  //       console.log("Fetched categories:", data);
+  //       if (!initialData?.categoryId && data.length > 0) {
+  //         setValue("categoryId", data[0].id);
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to fetch categories:", error);
+  //     }
+  //   }
+  //   fetchCategories();
+  // }, []);
   // ── Render ───────────────────────────────────────────────
   return (
     <div className="max-w-5xl mx-auto pb-20">
@@ -166,10 +166,11 @@ export function ProductForm({
               <input
                 {...register("title")}
                 placeholder="e.g. Classic Logo T-Shirt"
-                className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all ${errors.title
-                  ? "border-red-500 focus:ring-red-500"
-                  : "border-slate-200 dark:border-slate-700"
-                  }`}
+                className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all ${
+                  errors.title
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-slate-200 dark:border-slate-700"
+                }`}
               />
               {errors.title && (
                 <p className="text-xs text-red-500">{errors.title.message}</p>
@@ -186,15 +187,14 @@ export function ProductForm({
                   {...register("price", { valueAsNumber: true })}
                   type="number"
                   placeholder="0"
-                  className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all ${errors.price
-                    ? "border-red-500 focus:ring-red-500"
-                    : "border-slate-200 dark:border-slate-700"
-                    }`}
+                  className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all ${
+                    errors.price
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-slate-200 dark:border-slate-700"
+                  }`}
                 />
                 {errors.price && (
-                  <p className="text-xs text-red-500">
-                    {errors.price.message}
-                  </p>
+                  <p className="text-xs text-red-500">{errors.price.message}</p>
                 )}
               </div>
 
@@ -204,13 +204,16 @@ export function ProductForm({
                 </label>
                 <select
                   {...register("categoryId")}
-                  className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all appearance-none ${errors.categoryId
-                    ? "border-red-500 focus:ring-red-500"
-                    : "border-slate-200 dark:border-slate-700"
-                    }`}
+                  value={watchedCategoryId || ""}
+                  onChange={(e) => setValue("categoryId", e.target.value)}
+                  className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all appearance-none ${
+                    errors.categoryId
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-slate-200 dark:border-slate-700"
+                  }`}
                 >
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
+                    <option key={cat.id} value={String(cat.id)}>
                       {cat.name}
                     </option>
                   ))}
@@ -232,10 +235,11 @@ export function ProductForm({
                 {...register("description")}
                 rows={6}
                 placeholder="Product details and specifications..."
-                className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all resize-none ${errors.description
-                  ? "border-red-500 focus:ring-red-500"
-                  : "border-slate-200 dark:border-slate-700"
-                  }`}
+                className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all resize-none ${
+                  errors.description
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-slate-200 dark:border-slate-700"
+                }`}
               />
               {errors.description && (
                 <p className="text-xs text-red-500">
@@ -280,7 +284,10 @@ export function ProductForm({
                     className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 rounded-xl border border-slate-100 dark:border-slate-800 relative group"
                   >
                     {/* Hidden field for DB id */}
-                    <input type="hidden" {...register(`variants.${index}.id`)} />
+                    <input
+                      type="hidden"
+                      {...register(`variants.${index}.id`)}
+                    />
 
                     {/* Size */}
                     <div className="space-y-1">
@@ -290,10 +297,11 @@ export function ProductForm({
                       <input
                         {...register(`variants.${index}.size`)}
                         placeholder="e.g. M"
-                        className={`w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-xs dark:text-white ${errors.variants?.[index]?.size
-                          ? "border-red-500"
-                          : "border-slate-200 dark:border-slate-700"
-                          }`}
+                        className={`w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-xs dark:text-white ${
+                          errors.variants?.[index]?.size
+                            ? "border-red-500"
+                            : "border-slate-200 dark:border-slate-700"
+                        }`}
                       />
                       {errors.variants?.[index]?.size && (
                         <p className="text-[10px] text-red-500">
@@ -320,13 +328,16 @@ export function ProductForm({
                         Stock
                       </label>
                       <input
-                        {...register(`variants.${index}.stock`, { valueAsNumber: true })}
+                        {...register(`variants.${index}.stock`, {
+                          valueAsNumber: true,
+                        })}
                         type="number"
                         placeholder="0"
-                        className={`w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-xs dark:text-white ${errors.variants?.[index]?.stock
-                          ? "border-red-500"
-                          : "border-slate-200 dark:border-slate-700"
-                          }`}
+                        className={`w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-xs dark:text-white ${
+                          errors.variants?.[index]?.stock
+                            ? "border-red-500"
+                            : "border-slate-200 dark:border-slate-700"
+                        }`}
                       />
                       {errors.variants?.[index]?.stock && (
                         <p className="text-[10px] text-red-500">

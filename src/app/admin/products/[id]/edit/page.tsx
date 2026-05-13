@@ -2,52 +2,33 @@
 
 import { useEffect, useState, use } from "react";
 import { ProductForm } from "@/components/admin/ProductForm";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { useCategories } from "@/hooks/useCategories";
+import { useProduct, useUpdateProduct } from "@/hooks/useProducts";
+// import { CreateProduct } from "@/lib/validation/products.schema";
+import { CreateProductWithVariants } from "@/types/productWithVariants";
 
-export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function EditProductPage() {
+  const params = useParams();
   const router = useRouter();
-  const [product, setProduct] = useState(null);
+  const productId = params.id as string;
+  // const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const { data: categories } = useCategories();
+  // const { data: product } = useProduct(productId);
 
-  useEffect(() => {
-    async function fetchProduct() {
-      try {
-        const res = await fetch(`/api/products/${id}`);
-        const data = await res.json();
-        setProduct(data);
-      } catch (error) {
-        console.error("Failed to fetch product:", error);
-      } finally {
-        setIsFetching(false);
-      }
-    }
-    fetchProduct();
-  }, [id]);
+  const { data: product, isLoading: productLoading } = useProduct(productId);
 
-  const handleSubmit = async (data: any) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/products/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) throw new Error("Failed to update product");
-
-      router.push("/admin/products");
-      router.refresh();
-    } catch (error) {
-      console.error("Error updating product:", error);
-    } finally {
-      setLoading(false);
-    }
+  const updateProduct = useUpdateProduct();
+  const handleSubmit = async (data: CreateProductWithVariants) => {
+    console.log("Submitting data:", data);
+    await updateProduct.mutateAsync({ id: productId, data });
+    router.push("/admin/products");
   };
 
-  if (isFetching) {
+  if (productLoading) {
     return (
       <div className="flex items-center justify-center p-20">
         <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
@@ -59,7 +40,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <ProductForm initialData={product} onSubmit={handleSubmit} isLoading={loading} />
+      <ProductForm
+        initialData={product}
+        categories={categories || []}
+        onSubmit={handleSubmit}
+        isLoading={updateProduct.isLoading}
+      />
     </div>
   );
 }
