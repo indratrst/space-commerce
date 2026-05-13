@@ -58,7 +58,12 @@ export default function ProductsPage() {
         <div className="flex items-center gap-3">
           <div className="relative w-12 h-12 rounded-xl bg-slate-100 overflow-hidden shrink-0">
             {image ? (
-              <Image src={image} alt={item.title} fill className="object-cover" />
+              <Image
+                src={image}
+                alt={item.title}
+                fill
+                className="object-cover"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-slate-200">
                 <Package className="w-6 h-6 text-slate-400" />
@@ -66,8 +71,12 @@ export default function ProductsPage() {
             )}
           </div>
           <div className="min-w-0">
-            <p className="font-bold text-slate-900 dark:text-white truncate max-w-[200px]">{item.title}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{item.category?.name}</p>
+            <p className="font-bold text-slate-900 dark:text-white truncate max-w-[200px]">
+              {item.title}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              {item.category?.name}
+            </p>
           </div>
         </div>
       ),
@@ -77,7 +86,9 @@ export default function ProductsPage() {
       label: "Price",
       sortable: true,
       render: (price: number) => (
-        <span className="font-bold text-slate-900 dark:text-white">IDR {price.toLocaleString()}</span>
+        <span className="font-bold text-slate-900 dark:text-white">
+          IDR {price.toLocaleString()}
+        </span>
       ),
     },
     {
@@ -87,10 +98,15 @@ export default function ProductsPage() {
         const totalStock = variants.reduce((acc, v) => acc + v.stock, 0);
         return (
           <div className="flex flex-col gap-1">
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block w-fit ${
-              totalStock > 20 ? "bg-emerald-100 text-emerald-700" : 
-              totalStock > 0 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
-            }`}>
+            <span
+              className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block w-fit ${
+                totalStock > 20
+                  ? "bg-emerald-100 text-emerald-700"
+                  : totalStock > 0
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-red-100 text-red-700"
+              }`}
+            >
               {totalStock} in stock
             </span>
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">
@@ -101,19 +117,19 @@ export default function ProductsPage() {
       },
     },
     {
-        key: "id",
-        label: "Preview",
-        render: (id: string) => (
-          <Link 
-            href={`/product/${id}`} 
-            target="_blank"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-500 uppercase tracking-widest px-3 py-1.5 bg-indigo-50 rounded-lg transition-colors group"
-          >
-            Storefront
-            <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </Link>
-        )
-    }
+      key: "id",
+      label: "Preview",
+      render: (id: string) => (
+        <Link
+          href={`/product/${id}`}
+          target="_blank"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-500 uppercase tracking-widest px-3 py-1.5 bg-indigo-50 rounded-lg transition-colors group"
+        >
+          Storefront
+          <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+        </Link>
+      ),
+    },
   ];
 
   return (
@@ -123,7 +139,9 @@ export default function ProductsPage() {
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
             Product Management
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Control your inventory and showcase your items.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
+            Control your inventory and showcase your items.
+          </p>
         </div>
         <Link
           href="/admin/products/new"
