@@ -1,53 +1,26 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
 import { CategoryForm } from "@/components/admin/CategoryForm";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { useCategory, useUpdateCategory } from "@/hooks/useCategories";
+import { UpdateCategory } from "@/lib/validation/category.schema";
 
-export default function EditCategoryPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function EditCategoryPage() {
+  const params = useParams();
   const router = useRouter();
-  const [category, setCategory] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(true);
+  const categoryId = params.id as string;
 
-  useEffect(() => {
-    async function fetchCategory() {
-      try {
-        const res = await fetch(`/api/categories/${id}`);
-        const data = await res.json();
-        setCategory(data);
-      } catch (error) {
-        console.error("Failed to fetch category:", error);
-      } finally {
-        setIsFetching(false);
-      }
-    }
-    fetchCategory();
-  }, [id]);
+  const { data: category, isLoading: categoryLoading } =
+    useCategory(categoryId);
 
-  const handleSubmit = async (data: any) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/categories/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) throw new Error("Failed to update category");
-
-      router.push("/admin/categories");
-      router.refresh();
-    } catch (error) {
-      console.error("Error updating category:", error);
-    } finally {
-      setLoading(false);
-    }
+  const updateCategory = useUpdateCategory();
+  const handleSubmit = async (data: UpdateCategory) => {
+    await updateCategory.mutateAsync({ id: categoryId, data });
+    router.push("/admin/categories");
   };
 
-  if (isFetching) {
+  if (categoryLoading) {
     return (
       <div className="flex items-center justify-center p-20">
         <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
@@ -59,7 +32,11 @@ export default function EditCategoryPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <CategoryForm initialData={category} onSubmit={handleSubmit} isLoading={loading} />
+      <CategoryForm
+        initialData={category || []}
+        onSubmit={handleSubmit}
+        isLoading={updateCategory.isPending}
+      />
     </div>
   );
 }
