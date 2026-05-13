@@ -103,7 +103,7 @@ export async function POST(request: Request) {
         await tx.order.update({
           where: { id: order_id },
           data: {
-            status: OrderStatus.PAID,
+            status: OrderStatus.SETTLEMENT,
             stockReduced: true,
             externalId: body.transaction_id,
             paymentMethod: body.payment_type,
@@ -119,9 +119,9 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log(
-      `Order ${order_id} status updated to ${status_code} with payment type ${payment_type} and stock reduced: ${stock_reduced}`,
-    );
+    // console.log(
+    //   `Order ${order_id} status updated to ${status_code} with payment type ${payment_type} and stock reduced: ${stock_reduced}`,
+    // );
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
