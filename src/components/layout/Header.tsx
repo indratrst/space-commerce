@@ -15,6 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
 import { useDebounce } from "@/hooks/useDebounce";
+import { isMockMode, setMockMode } from "@/services/rajaongkir/mock";
 
 export function Header() {
   const { cart, setIsCartOpen } = useCart();
@@ -24,6 +25,8 @@ export function Header() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isMock, setIsMock] = useState(false);
+  const [isDev, setIsDev] = useState(false);
 
   const { data: searchResults, isLoading: isSearching } = useProducts(
     undefined,
@@ -33,6 +36,11 @@ export function Header() {
   const { data: categories } = useCategories();
 
   const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
+
+  useEffect(() => {
+    setIsDev(process.env.NODE_ENV === "development");
+    setIsMock(isMockMode());
+  }, []);
 
   // Sync search input with URL params if it changes from outside
   useEffect(() => {
@@ -86,6 +94,23 @@ export function Header() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative flex h-16 items-center justify-between">
             <div className="flex items-center">
+              {isDev && (
+                <button
+                  onClick={() => {
+                    const newMode = !isMock;
+                    setIsMock(newMode);
+                    setMockMode(newMode);
+                    window.location.reload();
+                  }}
+                  className={`text-xs px-3 py-1.5 rounded-full ${
+                    isMock
+                      ? "bg-yellow-500/20 text-yellow-600 border border-yellow-500/50"
+                      : "bg-green-500/20 text-green-600 border border-green-500/50"
+                  }`}
+                >
+                  {isMock ? "⚡ Mock" : "🌐 Live"}
+                </button>
+              )}
               <Link
                 href="/"
                 className="flex items-center gap-2 font-bold text-2xl tracking-tighter"
