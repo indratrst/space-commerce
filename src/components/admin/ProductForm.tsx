@@ -37,7 +37,7 @@ export function ProductForm({
       price: initialData?.price || 0,
       description: initialData?.description || "",
       image: initialData?.image || "",
-      categoryId: String(initialData?.categoryId || ""),
+      categoryId: String(initialData?.categoryId || categories?.[0]?.id),
       variants: initialData?.variants
         ?.filter((v: any) => v.isActive)
         .map((v: any) => ({
