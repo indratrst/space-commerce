@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CreateProduct,
   ProductResponse,
+  UpdateProduct,
 } from "@/lib/validation/products.schema";
 
 // export function useProducts(categorySlug?: string, search?: string) {
@@ -55,7 +56,6 @@ export function useProduct(id: string) {
 // Mutation hook - create product
 export function useCreateProduct() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (data: CreateProduct) => {
       console.log(data, "data");
@@ -86,7 +86,7 @@ export function useUpdateProduct() {
       data,
     }: {
       id: string;
-      data: Partial<CreateProduct>;
+      data: Partial<UpdateProduct>;
     }) => {
       const res = await fetch(`/api/products/${id}`, {
         method: "PUT",

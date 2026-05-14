@@ -1,17 +1,31 @@
 "use client";
 
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Loader2, Plus, ArrowLeft, Trash2, Box, Info } from "lucide-react";
 import Link from "next/link";
 import { ImageUpload } from "./ImageUpload";
 import { ProductBaseSchema } from "@/types";
 import { CategoryResponse } from "@/lib/validation/category.schema";
+import type { FieldErrors } from "react-hook-form";
+import {
+  CreateProduct,
+  ProductVariant,
+} from "@/lib/validation/products.schema";
+import { useEffect } from "react";
 
 // ─── Props ───────────────────────────────────────────────────
+
 interface ProductFormProps {
-  initialData?: any;
-  onSubmit: (data: ProductBaseSchema) => Promise<void>;
+  initialData?: {
+    title?: string;
+    price?: number;
+    description?: string;
+    image?: string;
+    categoryId?: string | number;
+    variants?: ProductVariant[];
+  };
+  onSubmit: (data: CreateProduct) => Promise<void>;
   isLoading?: boolean;
   categories?: CategoryResponse[];
 }
@@ -28,19 +42,20 @@ export function ProductForm({
     handleSubmit,
     control,
     setValue,
-    watch,
     formState: { errors },
-  } = useForm<ProductBaseSchema>({
-    resolver: standardSchemaResolver(ProductBaseSchema) as any,
+  } = useForm<CreateProduct>({
+    resolver: standardSchemaResolver(
+      ProductBaseSchema,
+    ) as import("react-hook-form").Resolver<ProductBaseSchema>,
     defaultValues: {
       title: initialData?.title || "",
       price: initialData?.price || 0,
       description: initialData?.description || "",
       image: initialData?.image || "",
-      categoryId: String(initialData?.categoryId || categories?.[0]?.id),
+      categoryId: String(initialData?.categoryId ?? ""),
       variants: initialData?.variants
-        ?.filter((v: any) => v.isActive)
-        .map((v: any) => ({
+        ?.filter((v: ProductVariant) => v.isActive)
+        .map((v: ProductVariant) => ({
           id: v.id,
           size: v.size,
           stock: v.stock,
@@ -49,16 +64,35 @@ export function ProductForm({
     },
   });
 
-  const { fields, append, remove, update } = useFieldArray({
+  const watchedImage = useWatch({ control, name: "image" });
+  const watchedVariants = useWatch({ control, name: "variants" });
+  const watchedCategoryId = useWatch({ control, name: "categoryId" });
+
+  // ── Fetch Categories ─────────────────────────────────────
+
+  useEffect(() => {
+    if (
+      categories &&
+      categories.length > 0 &&
+      !initialData && // Only for new product
+      !watchedCategoryId // Only if not already set
+    ) {
+      setValue("categoryId", String(categories[0].id));
+    }
+  }, [categories, initialData, setValue, watchedCategoryId]);
+
+  const { fields, append, remove } = useFieldArray({
     control,
     name: "variants",
   });
 
-  const watchedImage = watch("image");
-  const watchedVariants = watch("variants");
-  const watchedCategoryId = watch("categoryId");
-
-  // ── Fetch Categories ─────────────────────────────────────
+  if (!categories && !initialData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
   // ── Variant Helpers ──────────────────────────────────────
   const addVariant = () => {
@@ -80,58 +114,14 @@ export function ProductForm({
   const visibleCount = watchedVariants.filter((v) => !v.isDeleted).length;
 
   // ── Submit Handler ───────────────────────────────────────
-  const onFormSubmit = (data: ProductBaseSchema) => {
+  const onFormSubmit = (data: CreateProduct) => {
     onSubmit(data);
   };
 
-  const onFormError = (errors: any) => {
+  const onFormError = (errors: FieldErrors<CreateProduct>) => {
     console.log("❌ Validation errors:", errors);
   };
 
-  // useEffect(() => {
-  //   if (initialData) {
-  //     reset({
-  //       title: initialData.title || "",
-  //       price: initialData.price || 0,
-  //       description: initialData.description || "",
-  //       image: initialData.image || "",
-  //       categoryId: initialData.categoryId || "",
-  //       variants:
-  //         initialData.variants
-  //           ?.filter((v: any) => v.isActive)
-  //           .map((v: any) => ({
-  //             id: v.id,
-  //             size: v.size,
-  //             stock: v.stock,
-  //             color: v.color || "",
-  //           })) || [],
-  //     });
-  //   }
-  // }, [initialData, reset]);
-
-  // console.log("initial category:", initialData?.categoryId);
-  // console.log(
-  //   "categories ids:",
-  //   categories.map((c) => c.id),
-  // );
-
-  // useEffect(() => {
-  //   async function fetchCategories() {
-  //     try {
-  //       const res = await fetch("/api/categories");
-  //       const data = await res.json();
-  //       setCategories(data);
-  //       console.log("Fetched categories:", data);
-  //       if (!initialData?.categoryId && data.length > 0) {
-  //         setValue("categoryId", data[0].id);
-  //       }
-  //     } catch (error) {
-  //       console.error("Failed to fetch categories:", error);
-  //     }
-  //   }
-  //   fetchCategories();
-  // }, []);
-  // ── Render ───────────────────────────────────────────────
   return (
     <div className="max-w-5xl mx-auto pb-20">
       <div className="flex items-center gap-4 mb-8">
@@ -212,7 +202,12 @@ export function ProductForm({
                       : "border-slate-200 dark:border-slate-700"
                   }`}
                 >
-                  {categories.map((cat) => (
+                  <option value="" disabled>
+                    {!categories
+                      ? "Loading categories..."
+                      : "Select a category"}
+                  </option>
+                  {categories?.map((cat) => (
                     <option key={cat.id} value={String(cat.id)}>
                       {cat.name}
                     </option>
