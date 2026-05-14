@@ -22,7 +22,7 @@ export const UpdateCategorySchema = z
 
 // RESPONSE schema (from DB)
 export const CategoryResponseSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   name: z.string(),
   slug: z.string(),
   description: z.string().nullable(),

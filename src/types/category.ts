@@ -12,6 +12,6 @@ export type CategoryFormProps = {
 
 export type CategoryTableProps = {
   categories: CategoryResponse[];
-  onDelete?: (id: number) => void;
-  onEdit?: (id: number) => void;
+  onDelete?: (id: string) => void;
+  onEdit?: (id: string) => void;
 };
