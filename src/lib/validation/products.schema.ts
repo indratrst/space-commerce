@@ -60,7 +60,10 @@ import { z } from "zod";
 // ===== VARIANT SCHEMAS =====
 const VariantBaseSchema = {
   size: z.string().min(1, "Size wajib diisi"),
-  color: z.string().default(""),
+  color: z
+    .string()
+    .nullable()
+    .transform((val) => val ?? ""),
   stock: z.number().int().min(0, "Stock minimal 0"),
 };
 
@@ -73,10 +76,11 @@ const VariantInputSchema = z.object({
 });
 
 // Untuk response (dari DB)
-const VariantResponseSchema = z.object({
+export const VariantResponseSchema = z.object({
   id: z.string(),
   ...VariantBaseSchema,
-  isDeleted: z.boolean(),
+  isActive: z.boolean().optional(),
+  isDeleted: z.boolean().optional(),
 });
 
 // ===== PRODUCT SCHEMAS =====
@@ -125,3 +129,4 @@ export type CreateProduct = z.infer<typeof CreateProductSchema>;
 export type UpdateProduct = z.infer<typeof UpdateProductSchema>;
 export type ProductResponse = z.infer<typeof ProductResponseSchema>;
 export type ProductVariant = z.infer<typeof VariantInputSchema>;
+export type VariantResponse = z.infer<typeof VariantResponseSchema>;

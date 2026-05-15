@@ -1,10 +1,11 @@
 import { getProductById, getAllProducts } from "@/lib/data";
 import { notFound } from "next/navigation";
 import ProductDetailClient from "./ProductDetailClient";
+import { VariantResponseSchema } from "@/lib/validation/products.schema";
 
 export async function generateStaticParams() {
   const products = await getAllProducts();
-  return products.map((p: any) => ({ id: p.id }));
+  return products.map((p: { id: string }) => ({ id: p.id }));
 }
 
 export default async function ProductDetailPage({
@@ -34,21 +35,19 @@ export default async function ProductDetailPage({
   };
 
   // Compute total stock from all variants
-  const totalStock = product.variants.reduce((sum: number, v: any) => sum + v.stock, 0);
+  const totalStock = product.variants.reduce(
+    (sum: number, v) => sum + v.stock,
+    0,
+  );
 
-  // Map variants for size selection
-  const variants = product.variants.map((v: any) => ({
-    id: v.id,
-    size: v.size,
-    color: v.color,
-    stock: v.stock,
-  }));
-
+  const filteredVariants = product.variants
+    .filter((v) => v.isActive === true)
+    .map((v) => VariantResponseSchema.parse(v));
   return (
     <ProductDetailClient
       product={mappedProduct}
       totalStock={totalStock}
-      variants={variants}
+      variants={filteredVariants}
     />
   );
 }
