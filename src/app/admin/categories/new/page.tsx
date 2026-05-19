@@ -1,19 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { CategoryForm } from "@/components/admin/CategoryForm";
-import { useRouter } from "next/navigation";
 import { CreateCategory } from "@/lib/validation/category.schema";
 import { useCreateCategory } from "@/hooks/useCategories";
-import { CreateProductWithVariants } from "@/types/productWithVariants";
 
 export default function NewCategoryPage() {
-  const router = useRouter();
-
   const createCategory = useCreateCategory();
-  const handleSubmit = async (data: CreateProductWithVariants) => {
-    await createCategory.mutateAsync(data);
-    router.push("/admin/categories");
+
+  const handleSubmit = (data: CreateCategory) => {
+    createCategory.mutate(data); // ✅ di page
   };
 
   return (

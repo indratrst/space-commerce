@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Loader2, Plus, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import {
@@ -12,7 +12,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 
 interface CategoryFormProps {
   initialData?: any;
-  onSubmit: (data: CreateCategory) => Promise<void>;
+  onSubmit: (data: CreateCategory) => void | Promise<void>;
   isLoading?: boolean;
 }
 

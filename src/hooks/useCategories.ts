@@ -1,19 +1,17 @@
 // hooks/useCategories.ts
+import api from "@/lib/axios";
 import {
   CategoryResponse,
   CreateCategory,
 } from "@/lib/validation/category.schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 // Query hook
 export function useCategories() {
   return useQuery<CategoryResponse[]>({
     queryKey: ["categories"],
-    queryFn: async () => {
-      const res = await fetch("/api/categories");
-      if (!res.ok) throw new Error("Failed to fetch categories");
-      return res.json();
-    },
+    queryFn: () => api.get("/categories").then((res) => res.data),
     staleTime: 60 * 60 * 1000,
   });
 }
@@ -21,33 +19,27 @@ export function useCategories() {
 export function useCategory(id: string) {
   return useQuery<CategoryResponse>({
     queryKey: ["categories", id],
-    queryFn: async () => {
-      const res = await fetch(`/api/categories/${id}`);
-      if (!res.ok) throw new Error("Failed to fetch category");
-      return res.json();
-    },
     enabled: !!id, // Hanya jalan kalau ada id
+    queryFn: () => api.get(`/categories/${id}`).then((res) => res.data),
   });
 }
 
 // Mutation hook untuk create
 export function useCreateCategory() {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   return useMutation({
-    mutationFn: async (data: CreateCategory) => {
-      const res = await fetch("/api/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) throw new Error("Failed to create category");
-      return res.json();
-    },
+    mutationFn: (data: CreateCategory) =>
+      api.post("/categories", data).then((res) => res.data),
     onSuccess: () => {
-      // Invalidate dan refetch
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+      router.push("/admin/categories");
+    },
+    onError: (error) => {
+      const message =
+        error.response?.data?.error ?? "Failed to create category";
+      alert(message); // ganti dengan toast jika ada
     },
   });
 }
@@ -64,14 +56,8 @@ export function useUpdateCategory() {
       id: string;
       data: Partial<CreateCategory>;
     }) => {
-      const res = await fetch(`/api/categories/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) throw new Error("Failed to update category");
-      return res.json();
+      const res = await api.put(`/categories/${id}`, data);
+      return res.data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
@@ -85,9 +71,8 @@ export function useCategoriesWithStats() {
   return useQuery<(CategoryResponse & { productCount: number })[]>({
     queryKey: ["categories", "with-stats"],
     queryFn: async () => {
-      const res = await fetch("/api/categories?includeStats=true");
-      if (!res.ok) throw new Error("Failed to fetch categories");
-      return res.json();
+      const res = await api.get("/categories?includeStats=true");
+      return res.data;
     },
   });
 }

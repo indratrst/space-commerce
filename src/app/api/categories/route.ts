@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { CreateCategorySchema } from "@/lib/validation/category.schema";
+import { Prisma } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -47,6 +48,15 @@ export async function POST(request: Request) {
 
     return NextResponse.json(category);
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        return NextResponse.json(
+          { error: "Slug sudah digunakan, gunakan nama yang berbeda" },
+          { status: 409 }, // conflict
+        );
+      }
+    }
+
     console.error("Failed to create category:", error);
     return NextResponse.json(
       { error: "Failed to create category" },

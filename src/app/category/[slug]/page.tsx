@@ -1,10 +1,18 @@
 import { getProducts } from "@/lib/data";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from "@tanstack/react-query";
 import { ProductListClient } from "@/components/products/ProductListClient";
 
-export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CategoryPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const resolvedParams = await params;
   const { slug } = resolvedParams;
 
