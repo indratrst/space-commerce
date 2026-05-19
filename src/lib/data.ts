@@ -1,20 +1,44 @@
 import { prisma } from "@/lib/prisma";
 
 // Types that match the Prisma output (with relations)
-export type ProductWithRelations = Awaited<ReturnType<typeof getProducts>>[number];
-export type CategoryWithCount = Awaited<ReturnType<typeof getCategories>>[number];
+export type ProductWithRelations = Awaited<
+  ReturnType<typeof getProducts>
+>[number];
+export type CategoryWithCount = Awaited<
+  ReturnType<typeof getCategories>
+>[number];
 
 export async function getProducts(categorySlug?: string, search?: string) {
-  const where: any = {};
-  
+  // const where: { category?: { slug: string } } & { search?: string } = {};
+
+  // if (categorySlug) {
+  //   where.category = { slug: categorySlug };
+  // }
+
+  // if (search) {
+  //   where.OR = [
+  //     { title: { contains: search, mode: "insensitive" } },
+  //     { description: { contains: search, mode: "insensitive" } },
+  //   ];
+  // }
+  const where: {
+    category?: { slug: string };
+    OR?: Array<
+      | { title: { contains: string; mode: "insensitive" } }
+      | { description: { contains: string; mode: "insensitive" } }
+      | { category: { name: { contains: string; mode: "insensitive" } } }
+      | { category: { slug: { contains: string; mode: "insensitive" } } }
+    >;
+  } = {};
   if (categorySlug) {
     where.category = { slug: categorySlug };
   }
-  
   if (search) {
     where.OR = [
-      { title: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } }
+      { title: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+      { category: { name: { contains: search, mode: "insensitive" } } },
+      { category: { slug: { contains: search, mode: "insensitive" } } },
     ];
   }
 

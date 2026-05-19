@@ -90,7 +90,7 @@ const ProductBaseSchema = {
     .number({ message: "Harga wajib diisi" })
     .positive("Harga harus lebih dari 0"),
   description: z.string().min(1, "Deskripsi wajib diisi"),
-  image: z.string().url("Format URL tidak valid").default(""),
+  image: z.string().default(""),
   categoryId: z.string().min(1, "Kategori wajib dipilih"),
 };
 

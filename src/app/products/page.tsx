@@ -1,4 +1,4 @@
-import { getProducts, getCategories } from "@/lib/data";
+import { getProducts } from "@/lib/data";
 import {
   dehydrate,
   HydrationBoundary,
@@ -55,16 +55,13 @@ export default async function ProductsPage({
         ></div>
         {search && (
           <p className="mt-4 text-muted-foreground font-medium uppercase tracking-widest text-sm">
-            Showing results for `&quot;`{search}`&quot;`
+            Showing results for &quot;{search} &quot;
           </p>
         )}
       </div>
 
       <HydrationBoundary state={dehydrate(queryClient)}>
-        <ProductListClient
-          initialCategory={categorySlug}
-          initialSearch={search}
-        />
+        <ProductListClient />
       </HydrationBoundary>
     </div>
   );
