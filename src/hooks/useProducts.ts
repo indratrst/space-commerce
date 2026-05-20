@@ -5,25 +5,44 @@ import {
   UpdateProduct,
 } from "@/lib/validation/products.schema";
 import { ProductWithRelations } from "@/lib/data";
+import api from "@/lib/axios";
+
+// export function useProductUnique(categorySlug?: string, search?: string) {
+//   return useQuery<ProductWithRelations[]>({
+//     queryKey: ["products", { category: categorySlug, search }],
+//     queryFn: async () => {
+//       const params = new URLSearchParams();
+//       if (categorySlug) params.append("category", categorySlug);
+//       if (search) params.append("search", search);
+
+//       const queryString = params.toString();
+//       const url = queryString
+//         ? `/api/products?${queryString}`
+//         : "/api/products";
+
+//       const response = await fetch(url);
+//       if (!response.ok) {
+//         throw new Error("Network response was not ok");
+//       }
+//       return response.json();
+//     },
+//     staleTime: 5 * 60 * 1000, // 5 minutes
+//     gcTime: 30 * 60 * 1000, // 30 minutes
+//   });
+// }
 
 export function useProductUnique(categorySlug?: string, search?: string) {
   return useQuery<ProductWithRelations[]>({
     queryKey: ["products", { category: categorySlug, search }],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (categorySlug) params.append("category", categorySlug);
-      if (search) params.append("search", search);
+      const { data } = await api.get<ProductWithRelations[]>("/api/products", {
+        params: {
+          ...(categorySlug && { category: categorySlug }),
+          ...(search && { search }),
+        },
+      });
 
-      const queryString = params.toString();
-      const url = queryString
-        ? `/api/products?${queryString}`
-        : "/api/products";
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return response.json();
+      return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
@@ -33,24 +52,36 @@ export function useProductUnique(categorySlug?: string, search?: string) {
 export function useProducts() {
   return useQuery<ProductResponse[]>({
     queryKey: ["products"],
-    queryFn: async () => {
-      const res = await fetch("/api/products");
-      if (!res.ok) throw new Error("Failed to fetch products");
-      return res.json();
-    },
-    staleTime: 60 * 60 * 1000, // 1 hour
+    queryFn: () => api.get(`products`).then((res) => res.data),
+    staleTime: 60 * 60 * 1000,
   });
 }
+
+// export function useCategory(id: string) {
+//   return useQuery<CategoryResponse>({
+//     queryKey: ["categories", id],
+//     enabled: !!id, // Hanya jalan kalau ada id
+//     queryFn: () => api.get(`/api/products`).then((res) => res.data),
+//   });
+// }
+
+// export function useProduct(id: string) {
+//   return useQuery<ProductResponse>({
+//     queryKey: ["products", id],
+//     queryFn: async () => {
+//       const res = await fetch(`/api/products/${id}`);
+//       if (!res.ok) throw new Error("Failed to fetch product");
+//       return res.json();
+//     },
+//     enabled: !!id, // Hanya jalan kalau ada id
+//   });
+// }
 
 export function useProduct(id: string) {
   return useQuery<ProductResponse>({
     queryKey: ["products", id],
-    queryFn: async () => {
-      const res = await fetch(`/api/products/${id}`);
-      if (!res.ok) throw new Error("Failed to fetch product");
-      return res.json();
-    },
     enabled: !!id, // Hanya jalan kalau ada id
+    queryFn: () => api.get(`products/${id}`).then((res) => res.data),
   });
 }
 
@@ -58,20 +89,21 @@ export function useProduct(id: string) {
 export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: CreateProduct) => {
-      console.log(data, "data");
-      const res = await fetch("/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+    mutationFn: async (data: CreateProduct) =>
+      // console.log(data, "data");
+      // const res = await fetch("/api/products", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify(data),
+      // });
 
-      if (!res.ok) throw new Error("Failed to create product");
-      return res.json();
-    },
+      // if (!res.ok) throw new Error("Failed to create product");
+      // return res.json();
+
+      api.post("/products", data).then((res) => res.data),
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      // Optional: juga invalidate categories karena bisa affect category stats
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
   });
@@ -89,15 +121,10 @@ export function useUpdateProduct() {
       id: string;
       data: Partial<UpdateProduct>;
     }) => {
-      const res = await fetch(`/api/products/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) throw new Error("Failed to update product");
-      return res.json();
+      const res = await api.put(`/products/${id}`, data);
+      return res.data;
     },
+
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["products", variables.id] });
@@ -111,12 +138,8 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/products/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) throw new Error("Failed to delete product");
-      return res.json();
+      const res = await api.delete(`/products/${id}`);
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
