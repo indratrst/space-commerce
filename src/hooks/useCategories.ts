@@ -36,7 +36,7 @@ export function useCreateCategory() {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       router.push("/admin/categories");
     },
-    onError: (error) => {
+    onError: (error: { response?: { data?: { error?: string } } }) => {
       const message =
         error.response?.data?.error ?? "Failed to create category";
       alert(message); // ganti dengan toast jika ada
